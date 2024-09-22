@@ -13,7 +13,7 @@
 #define DCT_SIZE 8
 const int DEBUG = 1;
 
-const int STD_QUANT_LUMIN_TABLE[64] = {
+const uint8_t STD_QUANT_LUMIN_TABLE[64] = {
     16, 11, 10, 16, 24, 40, 51, 61,
     12, 12, 14, 19, 26, 58, 60, 55,
     14, 13, 16, 24, 40, 57, 69, 56,
@@ -24,7 +24,7 @@ const int STD_QUANT_LUMIN_TABLE[64] = {
     72, 92, 95, 98, 112,100,103,99,
 };
 
-const int STD_QUANT_CHROM_TABLE[64] = {
+const uint8_t STD_QUANT_CHROM_TABLE[64] = {
     17, 18, 24, 47, 99, 99, 99, 99,
     18, 21, 26, 66, 99, 99, 99, 99,
     24, 26, 56, 99, 99, 99, 99, 99,
@@ -107,12 +107,12 @@ void block_data_8x8(uint8_t* data, uint8_t blocks[][64], unsigned int width, uns
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename);
 void save_yuv_blocks_to_file(uint8_t y_blocks[][64], uint8_t u_blocks[][64], uint8_t v_blocks[][64], unsigned int w_block_size, unsigned int h_block_size, char* filename);
 void block_dct(uint8_t* in, int* out);
-void quant_encode(int data[64], const int table[64]);
-void quant_ecode(int data[64], const int table[64]);
+void quant_encode(int data[64], const uint8_t table[64]);
+void quant_ecode(int data[64], const uint8_t table[64]);
 void zigzag_encode(int data[64], const int table[64]);
 void zigzag_decode(int data[64], const int table[64]);
 void build_huffman_tree();
-void dc_ac_huffman_encode(const int data[64], int * dc, const HUFCODEITEM * lumin_dc_huffman_code_tree, const HUFCODEITEM * lumin_ac_huffman_code_tree, void * bs);
+void dc_ac_huffman_encode(const int data[64], int * dc, const HUFCODEITEM * dc_huffman_code_tree, const HUFCODEITEM * ac_huffman_code_tree, void * bs);
 int main() {
     // [0] load image to RGB
     clock_t time_start = clock();
@@ -211,7 +211,7 @@ int main() {
     // [量化] jpeg指定压缩质量1~99
     for (int i = 0; i < block_size; i++) {
         // y - lumain table
-        quant_encode(y_blocks_dct + i *64, STD_QUANT_LUMIN_TABLE);
+        quant_encode(y_blocks_dct + i * 64, STD_QUANT_LUMIN_TABLE);
         // u/v - chrom table
         quant_encode(u_blocks_dct + i * 64, STD_QUANT_CHROM_TABLE);
         quant_encode(v_blocks_dct + i * 64, STD_QUANT_CHROM_TABLE);
@@ -267,14 +267,14 @@ int main() {
         // ...
     // 多个 DQT(difine quantization table), 0xDB
     // DQT
-    const int *qtab[2] = {STD_QUANT_LUMIN_TABLE, STD_QUANT_CHROM_TABLE};
+    const uint8_t *qtab[2] = {STD_QUANT_LUMIN_TABLE, STD_QUANT_CHROM_TABLE};
     for (int i = 0; i < 2; i++) {
-        int len = 2 + 1 + 64;
         fputc(0xFF, fp);
         fputc(0xDB, fp);
+        int len = 2 + 1 + 64;
         fputc(len >> 8, fp);
         fputc(len >> 0, fp);
-        // dqt id 分别是0， 1, 即0x00, 0x01
+        // dqt table id 分别是0， 1, 即0x00, 0x01
         fputc(i, fp);
         for (int j = 0; j < 64; j++) {
             // 反 zigzag scan
@@ -282,11 +282,13 @@ int main() {
         }
     }
     // SOF0 (start of frame), 0xCO
-    int SOF0_len = 2 + 1 + 2 + 2 + 1 + 3*3;
     fputc(0xFF, fp);
     fputc(0xC0, fp);
     // start of frame length
+    int SOF0_len = 2 + 1 + 2 + 2 + 1 + 3*3;
+    // 写入 SOF0的高字节
     fputc(SOF0_len >> 8, fp);
+    // 写入 S0F0的低字节
     fputc(SOF0_len >> 0, fp);
     // precision 8bit
     fputc(8, fp);
@@ -300,6 +302,8 @@ int main() {
     // Y U V 的 id 分别是0x01, 0x02, 0x03
     // 这里是YUV444采样，三者采样因子都是 0x11； 若是 YUV420采样，则三者采样因子是 0x22, 0x11, 0x11
     // 最后一列则是 quantization table id
+    // y-0x01 使用 STD_QUANT_LUMIN_TABLE 0x00
+    // u-0x02 和 v-0x03 使用 STD_QUANT_CHROM_TABLE 0x01
     fputc(0x01, fp); fputc(0x11, fp); fputc(0x00, fp);
     fputc(0x02, fp); fputc(0x11, fp); fputc(0x01, fp);
     fputc(0x03, fp); fputc(0x11, fp); fputc(0x01, fp);
@@ -337,10 +341,10 @@ int main() {
     }
 
     // SOS (start of scan, 扫描开始)
-    int SOS_len = 2 + 1 + 2 * 3 + 3;
     fputc(0xFF, fp);
     fputc(0xDA, fp);
     // 扫描开始长度
+    int SOS_len = 2 + 1 + 2 * 3 + 3;
     fputc(SOS_len >> 8, fp);
     fputc(SOS_len >> 0 ,fp);
     // number of color components 颜色分量数
@@ -366,6 +370,8 @@ int main() {
 
     fflush(fp);
     fclose(fp);
+    clock_t time_save_jpeg = clock();
+    printf("KPI-save jpeg: %f ms\n", (double)(time_save_jpeg - time_huffman_encode)/ CLOCKS_PER_SEC * 1000);
 }
 
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename) {
@@ -479,12 +485,12 @@ void block_dct(uint8_t* in, int* out)
     }
 }
 
-void quant_encode(int data[64], const int table[64])
+void quant_encode(int data[64], const uint8_t table[64])
 {
     for (int i = 0; i < 64; i++) data[i] /= table[i];
 }
 
-void quant_decode(int data[64], const int table[64])
+void quant_decode(int data[64], const uint8_t table[64])
 {
     for (int i = 0; i < 64; i++) data[i] *= table[i];
 }
@@ -521,18 +527,20 @@ void category_encode(int * code, int * code_bit_length)
 
 void build_huffman_tree_from_std(const uint8_t * std_huf, HUFCODEITEM * huftree) {
     int code = 0x00, k = 0, tabsize = 0;
-    uint8_t hufsize[256], hufcode[256];
+    uint8_t hufsize[256];
+    int hufcode[256];
     for (int i = 0; i < MAX_HUFFMAN_CODE_LENGTH; i++) {
         for (int j = 0; j < std_huf[i]; j++ ) {
             hufsize[k] = i + 1;
             hufcode[k] = code;
-            code ++ ;
-            k ++;
+            code++ ;
+            k++;
         }
         code <<= 1;
     }
+    tabsize = k;
     // 前 MAX_HUFFMAN_CODE_LENGTH 个符号，对应标准编码表的编码长度
-    for (int i = 0; i < k; i++) {
+    for (int i = 0; i < tabsize; i++) {
         int symbol = std_huf[MAX_HUFFMAN_CODE_LENGTH + i];
         huftree[symbol].depth = hufsize[i];
         huftree[symbol].code = hufcode[i];
