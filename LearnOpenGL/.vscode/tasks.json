@@ -1,0 +1,54 @@
+// 参考：https://code.visualstudio.com/docs/editor/tasks
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"type": "shell",
+			"options": {
+				"cwd": "./" //当前执行目录
+			},
+			"windows": {
+				// "command": "cmake.exe --build ${workspaceFolder}\\build --config Debug --target ALL_BUILD -j 10 --;${workspaceFolder}\\build\\Debug\\myLearnOpenGL.exe"
+				// 不用msvc，使用mingw
+				// 执行3条命令，杀死源程序 > 生成 > 构建，用分号 ; 区分开3条命令
+				// "command": "Get-Process -Name myLearnOpenGL.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.Kill() }; cmake -G 'MinGW Makefiles' -B ${workspaceFolder}\\build -S ${workspaceFolder}; ${workspaceFolder}\\build\\myLearnOpenGL.exe"
+				"command": "Get-Process -Name myLearnOpenGL.exe -ErrorAction SilentlyContinue | ForEach-Object { $_.Kill() }; cmake -G 'MinGW Makefiles' -B ${workspaceFolder}\\build -S ${workspaceFolder}"
+			},
+			"linux": {
+				// "command": " cmake -G 'Unix Makefiles' -S. -Bbuild -DCMAKE_BUILD_TYPE=Debug && make -C build -j8 && ${workspaceFolder}/build/myLearnOpenGL"
+			}
+		},
+		{
+			// 单独新建一个run task，是为了拆分出build task，方便debug调用
+			"label": "run",
+			"type": "shell",
+			"options": {
+				"cwd": "./" //当前执行目录
+			},
+			"windows": {
+				"command": "${workspaceFolder}\\build\\myLearnOpenGL.exe"
+			},
+			"linux": {
+				"command": " ${workspaceFolder}/build/myLearnOpenGL"
+			}
+		},
+		{
+			"label": "build && run",
+			"dependsOrder": "sequence",
+			"dependsOn": [
+				"build",
+				"run"
+			],
+			"presentation": {
+				"echo": true,
+				"reveal": "always", // 在“终端”中显示编译信息的策略，可以为always，silent，never。具体参见VSC的文档
+				"focus": false, // 设为true后可以使执行task时焦点聚集在终端，但对编译c和c++来说，设为true没有意义
+				"panel": "shared", // 不同的文件的编译信息共享一个终端面板
+				"showReuseMessage": true,
+			},
+			"group": "build",
+			"problemMatcher": "$msCompile",
+		}
+	]
+}
