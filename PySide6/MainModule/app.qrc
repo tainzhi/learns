@@ -1,0 +1,11 @@
+<RCC>
+    <qresource prefix="/qt/qml/FileSystemModule">
+        <file>qmldir</file>
+        <file>Main.qml</file>
+        <file>qml/BlueBox.qml</file>
+        <file>qml/learn_qml_state_transition.qml</file>
+        <file>qml/learn_qml_repeater.qml</file>
+        <file>qml/learn_qml_listview.qml</file>
+        <file>qml/learn_qml_listview_model_action.qml</file>
+    </qresource>
+</RCC>
