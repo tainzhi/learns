@@ -25,7 +25,9 @@ mingw32-make
 
 DCT变换可以将图片从像素信号转换成频率信号，高频部分位于右下角，低频部分位于左上角（x分量频率从左到右是由低到高，y分量频率从上到下是由低到高）。 变换公式如下：
 
-$$\begin{aligned}&F(u,v)=c(u)c(v)\sum_{i=0}^{N-1}\sum_{j=0}^{N-1}f(i,j)\cos\left[\frac{(i+0.5)\pi}{N}u\right]\cos\left[\frac{(j+0.5)\pi}{N}v\right]\\&c(u)=\begin{cases}\sqrt{\frac{1}{N}},&u=0\\\sqrt{\frac{2}{N}},&u\neq0\end{cases}\end{aligned}$$
+$$
+\begin{aligned}&F(u,v)=c(u)c(v)\sum_{i=0}^{N-1}\sum_{j=0}^{N-1}f(i,j)\cos\left[\frac{(i+0.5)\pi}{N}u\right]\cos\left[\frac{(j+0.5)\pi}{N}v\right]\\&c(u)=\begin{cases}\sqrt{\frac{1}{N}},&u=0\\\sqrt{\frac{2}{N}},&u\neq0\end{cases}\end{aligned}
+$$
 
 - $F(u,v)$ 为DCT变换后坐标$(u,v)$的值
 - $c(u)$ $c(v)$为补偿系数，可以使DCT变换矩阵为正交矩阵
@@ -36,11 +38,11 @@ $$\begin{aligned}&F(u,v)=c(u)c(v)\sum_{i=0}^{N-1}\sum_{j=0}^{N-1}f(i,j)\cos\left
 jpeg是以YUV颜色空间进行编码的，所以需要从RGB空间转成YUV空间
 
 $$
-\begin{align}
+\begin{aligned}
 Y &= Min(Max(0, Round(0.299 \times R + 0.587 \times G + 0.114 \times B)), 255) \\
 C_B &= Min(Max(0, Round(-0.16874 \times R + 0.3313 \times G - 0.5 \times B) + 128), 255) \\
 C_R &= Min(Max(0, Round(0.5 \times R - 0.41869 \times G - 0.0813 \times B) + 128), 255)
-\end{align}
+\end{aligned}
 $$
 注意：YUV的值在[0, 255]之间
 
@@ -88,8 +90,8 @@ DCT变换后的频率表低频部分在表的左上角，高频部分在表的�
 写入文件头、量化表、yuv颜色空间、huffman ac/dc表、处理后的图像数据、文件结尾标识符
 
 ## 参考
-[jpeg文件格式](https://www.cnblogs.com/sddai/p/5666924.html)
-[learn jpeg encoder](https://github.com/xnvi/learn-jpeg-encode/blob/master/readme.md)
-[音视频编解码之路](https://segmentfault.com/a/1190000040098769)
-[github: jpeg demo ](https://github.com/binglingziyu/audio-video-blog-demos)
-[知乎 gezilinll：jpeg编码](https://zhuanlan.zhihu.com/p/376486491)
+- [jpeg文件格式](https://www.cnblogs.com/sddai/p/5666924.html)
+- [learn jpeg encoder](https://github.com/xnvi/learn-jpeg-encode/blob/master/readme.md)
+- [音视频编解码之路](https://segmentfault.com/a/1190000040098769)
+- [github: jpeg demo ](https://github.com/binglingziyu/audio-video-blog-demos)
+- [知乎 gezilinll：jpeg编码](https://zhuanlan.zhihu.com/p/376486491)
