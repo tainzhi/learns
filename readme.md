@@ -7,5 +7,8 @@
 ## [LearnOpenGL](./LearnOpenGL/)
 learn from [learnopengl](https://learnopengl.com/)
 
+## [OpenCV](./OpenCV/)
+学习OpenCV的一些记录、笔记、示例
+
 ## [PySide6](./PySide6/)
 学习PySide6的一些记录、笔记、示例
