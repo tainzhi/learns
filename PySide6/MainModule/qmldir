@@ -1,0 +1,7 @@
+module MainModule
+Main 1.0 Main.qml
+BlueBox 1.0 qml/BlueBox.qml
+LearnQmlStateTransition 1.0 qml/learn_qml_state_transition.qml
+LearnQmlRepeater 1.0 qml/learn_qml_repeater.qml
+LearnQmlListView 1.0 qml/learn_qml_listview.qml
+LearnQmlListViewModelAction 1.0 qml/learn_qml_listview_model_action.qml
