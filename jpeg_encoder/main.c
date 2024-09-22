@@ -237,7 +237,7 @@ int main() {
     build_huffman_tree();
     int dc[3] = {0};
     char *buffer = (char *)malloc(width * height * 2);
-    void *bs = mbitstr_open(buffer, width * height * 2);
+    void *bs = bitstr_open(BITSTR_MEM, buffer, width * height * 2);
     for (int i = 0; i < block_size; i++) {
         dc_ac_huffman_encode(y_blocks_dct + i * 64, dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
         dc_ac_huffman_encode(u_blocks_dct + i * 64, dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
@@ -258,20 +258,22 @@ int main() {
     fputc(0xFF, fp);
     fputc(0xD8, fp);
     // 参考： https://www.cnblogs.com/sddai/p/5666924.html
-    // APP0 Markder, 0xe0
+    // APP0 Markder, 0xE0
         // APP0 长度 2byte
         // identifier 5byte
         // version 2byte
         // ...
     // APPn Markers, 0xE1 - 0xEF
         // ...
+    fputc(0xFF, fp);
+        
     // 多个 DQT(difine quantization table), 0xDB
     // DQT
     const uint8_t *qtab[2] = {STD_QUANT_LUMIN_TABLE, STD_QUANT_CHROM_TABLE};
     for (int i = 0; i < 2; i++) {
         fputc(0xFF, fp);
         fputc(0xDB, fp);
-        int len = 2 + 1 + 64;
+        size_t len = 2 + 1 + 64;
         fputc(len >> 8, fp);
         fputc(len >> 0, fp);
         // dqt table id 分别是0， 1, 即0x00, 0x01
@@ -286,10 +288,8 @@ int main() {
     fputc(0xC0, fp);
     // start of frame length
     int SOF0_len = 2 + 1 + 2 + 2 + 1 + 3*3;
-    // 写入 SOF0的高字节
-    fputc(SOF0_len >> 8, fp);
-    // 写入 S0F0的低字节
-    fputc(SOF0_len >> 0, fp);
+    fputc(SOF0_len >> 8, fp); // 写入 SOF0长度的高字节
+    fputc(SOF0_len >> 0, fp); // 写入 S0F0长度的低字节
     // precision 8bit
     fputc(8, fp);
     fputc(height >> 8, fp);
@@ -314,7 +314,7 @@ int main() {
     for (int i = 0; i < 2; i++) {
         fputc(0xFF, fp);
         fputc(0xC4, fp);
-        int len = 2 + 1 + 16;
+        size_t len = 2 + 1 + 16;
         for (int j = 0; j < 16; j++) {
             len += huffman_ac_tables[i][j];
         }
@@ -329,7 +329,7 @@ int main() {
     for (int i = 0; i < 2; i++) {
         fputc(0xFF, fp);
         fputc(0xC4, fp);
-        int len = 2 + 1 + 16;
+        size_t len = 2 + 1 + 16;
         for (int j = 0; j < 16; j++) {
             len += huffman_dc_tables[i][j];
         }

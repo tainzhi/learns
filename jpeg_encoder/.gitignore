@@ -1,0 +1,10 @@
+*.yuv
+*.jpeg
+main.exe
+main.out
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+.cache/clangd/
+compile_commands.json
+build/
