@@ -1,0 +1,39 @@
+// 参考：https://code.visualstudio.com/docs/cpp/c-cpp-properties-schema-reference
+{
+    "env": {
+        // 设置默认项，这样不同platform就无需再设置
+        "myDefaultIncludePath": [
+        ],
+        "myCompilerPath": ""
+    },
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceRoot}/**",
+                "${workspaceRoot}/include",
+                "${userHome}/scoop/apps/mingw/current/include",
+                "${userHome}/scoop/apps/mingw/current/x86_64-w64-mingw32/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "cStandard": "c99",
+            "intelliSenseMode": "windows-gcc-x64",
+            "browse": {
+                "path": [
+                    "${workspaceRoot}/**",
+                    "${workspaceRoot}/include",
+                    "${userHome}/scoop/apps/mingw/current/include",
+                    "${userHome}/scoop/apps/mingw/current/x86_64-w64-mingw32/include"
+                ],
+                "limitSymbolsToIncludedHeaders": false,
+                "databaseFilename": ""
+            },
+            "compilerPath": "${userHome}/scoop/apps/mingw/current/bin/gcc"
+        }
+    ],
+    "version": 4
+}

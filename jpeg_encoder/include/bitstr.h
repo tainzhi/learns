@@ -173,10 +173,10 @@ static int fbitstr_flush(void *stream) {
 //--- file bitstr --//
 
 // 函数实现
-void *bitstr_open(int type, char *file, char *mode) {
+void *bitstr_open(int type, char *file, void *mode) {
   switch (type) {
   case BITSTR_MEM:
-    return mbitstr_open((void *)file, (int)mode);
+    return mbitstr_open((void *)file, *(int *)mode);
   case BITSTR_FILE:
     return fbitstr_open((char *)file, (char *)mode);
   }

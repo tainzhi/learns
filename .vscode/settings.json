@@ -1,3 +1,6 @@
 {
-    "cmake.sourceDirectory": "D:/learns/jpeg_encoder"
+    "cmake.sourceDirectory": "D:/learns/jpeg_encoder",
+    "files.associations": {
+        "math.h": "c"
+    }
 }
