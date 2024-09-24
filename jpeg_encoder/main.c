@@ -102,17 +102,19 @@ HUFCODEITEM lumin_ac_huffman_code_tree[256];
 HUFCODEITEM chrom_dc_huffman_code_tree[256];
 HUFCODEITEM chrom_ac_huffman_code_tree[256];
 
-void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const unsigned int width, const unsigned int height, const unsigned int channel);
-void block_data_8x8(uint8_t* data, uint8_t blocks[][64], unsigned int width, unsigned int height, unsigned int w_block_size, unsigned int h_block_size);
+void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const int width, const int height, const int channel);
+void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ***blocks, size_t * w_blocks_size, size_t * h_blocks_size);
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename);
-void save_yuv_blocks_to_file(uint8_t y_blocks[][64], uint8_t u_blocks[][64], uint8_t v_blocks[][64], unsigned int w_block_size, unsigned int h_block_size, char* filename);
+void save_yuv_blocks_to_file(const uint8_t **y_blocks, const uint8_t ** u_blocks, const uint8_t ** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, char* filename);
 void block_dct(uint8_t* in, int* out);
 void quant_encode(int block[64], const uint8_t table[64]);
-void quant_ecode(int block[64], const uint8_t table[64]);
+void quant_decode(int block[64], const uint8_t table[64]);
 void zigzag_encode(int block[64], const int table[64]);
 void zigzag_decode(int block[64], const int table[64]);
 void build_huffman_tree();
 void dc_ac_huffman_encode(const int block[64], int * dc, const HUFCODEITEM * dc_huffman_code_tree, const HUFCODEITEM * ac_huffman_code_tree, void * bs);
+
+
 int main() {
     // [0] load image to RGB
     clock_t time_start = clock();
@@ -124,7 +126,10 @@ int main() {
     printf("KPI-load image: %f ms\n", (double)(time_end_load - time_start) / CLOCKS_PER_SEC * 1000);
 
 
-    // [1] convert RGB to YUV444
+    // [1] convert RGB to YUV
+    // image像素坐标从左上角(0,0)到右下角(height, width)
+    // height垂直方向是row索引从0~height
+    // width水平方向是column索引从0~width
     uint8_t yuv_y[width * height];
     uint8_t yuv_u[width * height];
     uint8_t yuv_v[width * height];
@@ -132,34 +137,48 @@ int main() {
     clock_t time_rgb_to_yuv = clock();
     printf("KPI-rgb to yuv: %f ms\n", (double)(time_rgb_to_yuv - time_end_load) / CLOCKS_PER_SEC * 1000);
     if (DEBUG == 1) {
-        // write YUV444 to file
+        // write YUV to file
         // 用 https://github.com/IENT/YUViewa 查看结果
-        // 设置 width, height, YUV Format为 yuv444 planar, Color Components为 YCbCr
-        save_yuv_to_file(yuv_y, yuv_u, yuv_v, width, height, "./lenna_yuv444.yuv");
+        // 设置 width, height, YUV Format为 yuv planar, Color Components为 YCbCr
+        save_yuv_to_file(yuv_y, yuv_u, yuv_v, width, height, "./lenna_yuv.yuv");
     }
 
 
     // [2] sample
     // todo: sample YUV444 to YUV420
-    #ifdef YUV420
+    int y_width = width, y_height = height;
+    #ifndef YUV420
+    int uv_width = width, uv_height = height;
+    #else
+    yuv_420_sample()
     #endif
 
 
     // [3] 分块, 每块8x8大小
-    int h_block_size = height / 8 + (height % 8 == 0 ? 0 : 1);
-    int w_block_size = width / 8 + (width % 8 == 0 ? 0 : 1);
+    // y分量width被分成的块数
+    size_t y_w_blocks_size = 0;
+    size_t y_h_blocks_size = 0;
+    // uv分量width方向被分成的块数
+    size_t uv_w_blocks_size = 0;
+    size_t uv_h_blocks_size = 0;
+    // 都是二维数组，大小是 [y_block_size][64]
+    // 每一行都是固定的64列
+    // todo: free memory
+    uint8_t **y_blocks = NULL;
+    uint8_t **u_blocks = NULL;
+    uint8_t **v_blocks = NULL;
+    // 要修改 y_blocks 和 uv_blocks 的大小, 故传入地址
+    block_data_8x8(yuv_y, y_width, y_height, &y_blocks, &y_w_blocks_size, &y_h_blocks_size);
+    block_data_8x8(yuv_u, uv_width, uv_height, &u_blocks, &uv_w_blocks_size, &uv_h_blocks_size);
+    block_data_8x8(yuv_v, uv_width, uv_height, &v_blocks, &uv_w_blocks_size,&uv_h_blocks_size);
+    size_t y_blocks_size = y_w_blocks_size * y_h_blocks_size;
+    size_t uv_blocks_size = uv_w_blocks_size * uv_h_blocks_size;
     if (DEBUG == 1)
-        printf("w_block_size: %d, h_block_size: %d\n", w_block_size, h_block_size);
-    int block_size = w_block_size * h_block_size;
-    uint8_t y_blocks[block_size][64];
-    uint8_t u_blocks[block_size][64];
-    uint8_t v_blocks[block_size][64];
-    block_data_8x8(yuv_y, y_blocks, width, height, w_block_size, h_block_size);
-    block_data_8x8(yuv_u, u_blocks, width, height, w_block_size, h_block_size);
-    block_data_8x8(yuv_v, v_blocks, width, height, w_block_size, h_block_size);
+        printf("y blocks size: %zu, uv blocks size: %zu\n", y_blocks_size, uv_blocks_size);
     clock_t time_end_split_blocks = clock();
     printf("KPI-split blocks: %f ms\n", (double)(time_end_split_blocks - time_rgb_to_yuv) / CLOCKS_PER_SEC * 1000);
-    // save_yuv_blocks_to_file(y_blocks, u_blocks, v_blocks, w_block_size, h_block_size, "./lenna_yuv444_blocks.yuv");
+    if (DEBUG == 1)
+        save_yuv_blocks_to_file(y_blocks, u_blocks, v_blocks, y_w_blocks_size, y_h_blocks_size, uv_w_blocks_size, uv_h_blocks_size, "./lenna_blocks_yuv.yuv");
 
 
     // [4] 离散余弦变换 DCT
@@ -168,36 +187,44 @@ int main() {
     // float u_blocks_dct[block_size][64];
     // float v_blocks_dct[block_size][64];
     // 在堆上分配内存
-    int* y_blocks_dct = (int*)malloc(sizeof(int) * block_size * 64);
-    int* u_blocks_dct = (int*)malloc(sizeof(int) * block_size * 64);
-    int* v_blocks_dct = (int*)malloc(sizeof(int) * block_size * 64);
+    // 二维数组，每一行都是固定的64列
+    // todo: free memory
+    int ** y_blocks_dct = (int **)malloc(sizeof(int*) * y_blocks_size);
+    for (int i = 0; i < y_blocks_size; i++) y_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
+    int ** u_blocks_dct = (int **)malloc(sizeof(int*) * uv_blocks_size);
+    for (int i = 0; i < uv_blocks_size; i++) u_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
+    int ** v_blocks_dct = (int **)malloc(sizeof(int*) * uv_blocks_size);
+    for (int i = 0; i < uv_blocks_size; i++) v_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
     // 最原始版本的 DCT 很慢，处理 512*512 的原图要花费 12.29s
     // for (int i = 0; i < block_size; i++) {
-    //     block_dct(y_blocks[i], y_blocks_dct + i * 64);
-    //     block_dct(u_blocks[i], u_blocks_dct + i * 64);
-    //     block_dct(v_blocks[i], v_blocks_dct + i * 64);
+    //     block_dct(y_blocks[i], y_blocks_dct[i]);
+    //     block_dct(u_blocks[i], u_blocks_dct[i]);
+    //     block_dct(v_blocks[i], v_blocks_dct[i]);
     // }
     // todo: 参考 https://github.com/binglingziyu/audio-video-blog-demos/blob/master/15-rgb-to-jpeg/rgb-to-jpeg.c 
     // 快速傅里叶变换的使得复杂度从 O(N^2) 降低到 N/log_2N
     // 处理512*512 的原图只花费 11ms, 复杂度降低了1000倍
     init_dct_module();
-    for (int i = 0; i < block_size; i++) {
+    for (int i = 0; i < y_blocks_size; i++) {
         uint8_t* y_block = y_blocks[i];
-        int* y_block_dct = y_blocks_dct + i * 64;
+        int* y_block_dct = y_blocks_dct[i];
         // level shift, 把值域从[0,255]移动到[-128,127]
         for (int j = 0; j < 64; j++) y_block_dct[j] = y_block[j] - 128;
         for (int j = 0; j < 64; j++) y_block_dct[j] = y_block_dct[j] << 2;
         fdct2d8x8(y_block_dct, NULL);
-
+    #ifdef YUV420
+    }
+    for (int i = 0; i < uv_blocks_size; i++) {
+    #endif
         uint8_t* u_block = u_blocks[i];
-        int* u_block_dct = u_blocks_dct + i * 64;
+        int* u_block_dct = u_blocks_dct[i];
         // level shift, 把值域从[0,255]移动到[-128,127]
         for (int j = 0; j < 64; j++) u_block_dct[j] = u_block[j] - 128;
         for (int j = 0; j < 64; j++) u_block_dct[j] = u_block_dct[j] << 2;
         fdct2d8x8(u_block_dct, NULL);
 
         uint8_t* v_block = v_blocks[i];
-        int* v_block_dct = v_blocks_dct + i * 64;
+        int* v_block_dct = v_blocks_dct[i];
         // level shift, 把值域从[0,255]移动到[-128,127]
         for (int j = 0; j < 64; j++) v_block_dct[j] = v_block[j] - 128;
         for (int j = 0; j < 64; j++) v_block_dct[j] = v_block_dct[j] << 2;
@@ -208,22 +235,30 @@ int main() {
 
 
     // [量化] jpeg指定压缩质量1~99
-    for (int i = 0; i < block_size; i++) {
+    for (int i = 0; i < y_blocks_size; i++) {
         // y - lumain table
-        quant_encode(y_blocks_dct + i * 64, STD_QUANT_LUMIN_TABLE);
+        quant_encode(y_blocks_dct[i], STD_QUANT_LUMIN_TABLE);
+    #ifdef YUV420
+    }
+    for (int i = 0; i < uv_blocks_size; i++) {
+    #endif
         // u/v - chrom table
-        quant_encode(u_blocks_dct + i * 64, STD_QUANT_CHROM_TABLE);
-        quant_encode(v_blocks_dct + i * 64, STD_QUANT_CHROM_TABLE);
+        quant_encode(u_blocks_dct[i], STD_QUANT_CHROM_TABLE);
+        quant_encode(v_blocks_dct[i], STD_QUANT_CHROM_TABLE);
     }
     clock_t time_quant = clock();
     printf("KPI-quant: %f ms\n", (double)(time_quant - time_end_dct) / CLOCKS_PER_SEC * 1000);
 
 
     // [Zigzag扫描]
-    for (int i = 0; i < block_size; i++) {
-        zigzag_encode(y_blocks_dct + i * 64, ZIGZAG_TABLE);
-        zigzag_encode(u_blocks_dct + i * 64, ZIGZAG_TABLE);
-        zigzag_encode(v_blocks_dct + i * 64, ZIGZAG_TABLE);
+    for (int i = 0; i < y_blocks_size; i++) {
+        zigzag_encode(y_blocks_dct[i], ZIGZAG_TABLE);
+    #ifdef YUV420
+    }
+    for (int i = 0; i < uv_blocks_size; i++) {
+    #endif
+        zigzag_encode(u_blocks_dct[i], ZIGZAG_TABLE);
+        zigzag_encode(v_blocks_dct[i], ZIGZAG_TABLE);
     }
     clock_t time_zigzag_scan = clock();
     printf("KPI-zigzag scan: %f ms\n", (double)(time_zigzag_scan - time_quant)/ CLOCKS_PER_SEC * 1000);
@@ -235,12 +270,17 @@ int main() {
     // [熵编码-huffman编码]
     build_huffman_tree();
     int dc[3] = {0};
+    // todo: free memory
     char *buffer = (char *)malloc(width * height * 2);
     void *bs = bitstr_open(BITSTR_MEM, buffer, width * height * 2);
-    for (int i = 0; i < block_size; i++) {
-        dc_ac_huffman_encode(y_blocks_dct + i * 64, dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-        dc_ac_huffman_encode(u_blocks_dct + i * 64, dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
-        dc_ac_huffman_encode(v_blocks_dct + i * 64, dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+    for (int i = 0; i < y_blocks_size; i++) {
+        dc_ac_huffman_encode(y_blocks_dct[i], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+    #ifdef YUV420
+    }
+    for (int i = 0; i < uv_blocks_size; i++) {
+    #endif   
+        dc_ac_huffman_encode(u_blocks_dct[i], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+        dc_ac_huffman_encode(v_blocks_dct[i], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
     }
     long data_length = bitstr_tell(bs);
     if (DEBUG == 1)
@@ -390,26 +430,28 @@ void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t*
     fclose(fp);
 }
 
-void save_yuv_blocks_to_file(uint8_t y_blocks[][64], uint8_t u_blocks[][64], uint8_t v_blocks[][64], unsigned int w_block_size, unsigned int h_block_size, char* filename) {
+void save_yuv_blocks_to_file(const uint8_t **y_blocks, const uint8_t ** u_blocks, const uint8_t ** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, char* filename) {
+    if (DEBUG == 1)
+        printf("y_w_blocks_size: %d, y_h_blocks_size: %d, uv_w_blocks_size: %d, uv_h_blocks_size: %d\n", y_w_blocks_size, y_h_blocks_size, uv_w_blocks_size, uv_h_blocks_size);
     FILE* fp_block = fopen(filename, "wb");
-    for (int i = 0; i < h_block_size; i++) {
+    for (int i = 0; i < y_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
-            for (int j = 0; j < w_block_size; j++) {
-                fwrite(y_blocks[i * w_block_size + j] + k * 8, 1, 8, fp_block);
+            for (int j = 0; j < y_w_blocks_size; j++) {
+                fwrite(y_blocks[i * y_w_blocks_size + j] + k * 8, 1, 8, fp_block);
             }
         }
     }
-    for (int i = 0; i < h_block_size; i++) {
+    for (int i = 0; i < uv_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
-            for (int j = 0; j < w_block_size; j++) {
-                fwrite(u_blocks[i * w_block_size + j] + k * 8, 1, 8, fp_block);
+            for (int j = 0; j < uv_w_blocks_size; j++) {
+                fwrite(u_blocks[i * uv_w_blocks_size + j] + k * 8, 1, 8, fp_block);
             }
         }
     }
-    for (int i = 0; i < h_block_size; i++) {
+    for (int i = 0; i < uv_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
-            for (int j = 0; j < w_block_size; j++) {
-                fwrite(v_blocks[i * w_block_size + j] + k * 8, 1, 8, fp_block);
+            for (int j = 0; j < uv_w_blocks_size; j++) {
+                fwrite(v_blocks[i * uv_w_blocks_size + j] + k * 8, 1, 8, fp_block);
             }
         }
     }
@@ -421,7 +463,7 @@ void save_yuv_blocks_to_file(uint8_t y_blocks[][64], uint8_t u_blocks[][64], uin
 // V = Cr = 0.500*R - 0.419*G - 0.081*B + 128
 // R/G/B  [0 ~ 255]
 // Y/Cb/Cr[0 ~ 255]
-void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const unsigned width, const unsigned height, const unsigned channel) {
+void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const int width, const int height, const int channel) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = i * width + j;
@@ -444,22 +486,34 @@ void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const
     }
 }
 
-void block_data_8x8(uint8_t* data, uint8_t blocks[][64], unsigned int width, unsigned int height, unsigned int w_block_size, unsigned int h_block_size)
+/**
+ * @param *w_blocks_size  width方向被分割的块数
+ * @param *h_blocks_size  height方向被分割的块数
+ */
+void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ***blocks, size_t * w_blocks_size, size_t * h_blocks_size)
 {
+    *h_blocks_size = height / 8 + (height % 8 == 0 ? 0 : 1);
+    *w_blocks_size = width / 8 + (width % 8 == 0 ? 0 : 1);
+    int blocks_size = (*h_blocks_size) * (*w_blocks_size);
+    // 先申请一维数组，存储所有的8x8块的地址指针
+    *blocks = (uint8_t **)malloc(blocks_size * sizeof(uint8_t *));
     // 左上角坐标（0,0), 右下角坐标(height, width)
     // row in [0, height], column in [0, width]
-    for (int row = 0; row < h_block_size; row++) {
-        for (int col = 0; col < w_block_size; col++) {
-            uint8_t* block = blocks[row * w_block_size + col];
+    for (int row = 0; row < (*h_blocks_size); row++) {
+        for (int col = 0; col < (*w_blocks_size); col++) {
+            // 再申请8x8块
+            uint8_t *block = (uint8_t *)malloc(sizeof(uint8_t) * 64);
+            (*blocks)[row * (*w_blocks_size) + col] = block;
             for (int sub_row = 0; sub_row < 8; sub_row++) {
                 for (int sub_col = 0; sub_col < 8; sub_col++) {
                     int data_row = row * 8 + sub_row;
                     int data_col = col * 8 + sub_col;
+                    int pos =  sub_row * 8 + sub_col;
                     if (data_row >= height || data_col >= width) {
-                        block[sub_row * 8 + sub_col] = 0;
+                        block[pos] = 0;
                     }
                     else {
-                        block[sub_row * 8 + sub_col] = data[data_row * width + data_col];
+                        block[pos] = data[data_row * width + data_col];
                     }
                 }
             }
