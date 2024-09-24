@@ -3,13 +3,14 @@
 
 # Usage
 ```shell
-cmake -S. -Bbuild  
 # 在windows下使用MinGW构建
-cmake -G "MinGW Makefiles"  
-mingw32-make
+cmake -S. -Bbuild -G "MinGW Makefiles"  
+
+# 构建到 build 目录
+cmake --build build
 
 # 构建成功后
-./jpeg_encoder.exe
+./build/jpeg_encoder.exe
 ```
 # jpeg编码原理
 ## 图像是波
@@ -65,6 +66,7 @@ DCT变换后的频率表低频部分在表的左上角，高频部分在表的�
 
 ### DC系数的差分脉冲调制编码
 相邻的位置值相似，所以只编码这个差值信息，可以进一步降低编码数据量。
+因为很多相邻位置的数值相同，差值就变成了0，很方便后续进入RLC编码。
 ### DC系数的中间编码
 数据是二进制的写入文件后需要知道这个数据的长度，这个数据的长度通过二进制移位方法可以获取
 ### AC系数的游程编码
