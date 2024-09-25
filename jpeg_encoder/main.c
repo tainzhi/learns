@@ -8,11 +8,48 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+// YUV444 最终jpeg图片大小23kb, YUV420采样 最终图片大小18kb
 #define YUV420  // 注释掉该行，则YUV444采样
 // 1 打印较详细的运行信息，0 不打印
-const int DEBUG = 1;
+const int DEBUG = 0;
 
 #define DCT_SIZE 8
+
+// 定义一个宏来释放三维数组
+#define FREE_3D_ARRAY(memory, DIM1, DIM2) do { \
+    if (memory != NULL) { \
+        for (int i = 0; i < DIM1; ++i) { \
+            for (int j = 0; j < DIM2; ++j) { \
+                free((memory)[i][j]); \
+                (memory)[i][j] = NULL; \
+            } \
+            free((memory)[i]); \
+            (memory)[i] = NULL; \
+        } \
+        free(memory); \
+        memory = NULL; \
+    } \
+} while(0)
+
+// 定义一个宏来分配三维数组
+#define ALLOCATE_3D_ARRAY(memory, type, DIM1, DIM2, DIM3) do { \
+    memory = (type ***)malloc(DIM1 * sizeof(type **)); \
+    if (memory == NULL) { \
+        printf("Memory allocation failed for DIM1.\n"); \
+    } \
+    for (int i = 0; i < DIM1; ++i) { \
+        memory[i] = (type **)malloc(DIM2 * sizeof(type *)); \
+        if (memory[i] == NULL) { \
+            printf("Memory allocation failed for DIM2.\n"); \
+        } \
+        for (int j = 0; j < DIM2; ++j) { \
+            memory[i][j] = (type *)malloc(DIM3 * sizeof(type)); \
+            if (memory[i][j] == NULL) { \
+                printf("Memory allocation failed for DIM3.\n"); \
+            } \
+        } \
+    } \
+} while(0)
 
 const uint8_t STD_QUANT_LUMIN_TABLE[64] = {
     16, 11, 10, 16, 24, 40, 51, 61,
@@ -105,10 +142,10 @@ HUFCODEITEM chrom_ac_huffman_code_tree[256];
 
 void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const int width, const int height, const int channel);
 void yuv420_sample(uint8_t *yuv_y, uint8_t * yuv_u, uint8_t *yuv_v, int * y_width, int * y_height, int *uv_width, int * uv_height);
-void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ***blocks, size_t * w_blocks_size, size_t * h_blocks_size);
+void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ****blocks, size_t * w_blocks_size, size_t * h_blocks_size);
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename);
-void save_yuv_blocks_to_file(const uint8_t ** y_blocks, const uint8_t ** u_blocks, const uint8_t ** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, const char* filename);
-void block_dct(uint8_t* in, int* out);
+void save_yuv_blocks_to_file(const uint8_t *** y_blocks, const uint8_t *** u_blocks, const uint8_t *** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, const char* filename);
+// void block_dct(uint8_t* in, int* out);
 void quant_encode(int block[64], const uint8_t table[64]);
 void quant_decode(int block[64], const uint8_t table[64]);
 void zigzag_encode(int block[64], const int table[64]);
@@ -163,12 +200,11 @@ int main() {
     // uv分量width方向被分成的块数
     size_t uv_w_blocks_size = 0;
     size_t uv_h_blocks_size = 0;
-    // 都是二维数组，大小是 [y_block_size][64]
-    // 二维数组即二重指针
-    // 每一行都是固定的64列
-    uint8_t **y_blocks = NULL;
-    uint8_t **u_blocks = NULL;
-    uint8_t **v_blocks = NULL;
+    // 都是三维数组，大小是 [y_w_blocks_size][y_h_blocks_size][64]
+    // 三维数组即三重指针
+    uint8_t ***y_blocks = NULL;
+    uint8_t ***u_blocks = NULL;
+    uint8_t ***v_blocks = NULL;
     // 要修改 y_blocks 和 u_blocks, v_blocks 的大小, 故传入地址
     block_data_8x8(yuv_y, y_width, y_height, &y_blocks, &y_w_blocks_size, &y_h_blocks_size);
     block_data_8x8(yuv_u, uv_width, uv_height, &u_blocks, &uv_w_blocks_size, &uv_h_blocks_size);
@@ -180,8 +216,7 @@ int main() {
     clock_t time_end_split_blocks = clock();
     printf("KPI-split blocks: %f ms\n", (double)(time_end_split_blocks - time_rgb_to_yuv) / CLOCKS_PER_SEC * 1000);
     if (DEBUG == 1)
-        save_yuv_blocks_to_file((const uint8_t **)y_blocks, (const uint8_t **)u_blocks, (const uint8_t **)v_blocks, y_w_blocks_size, y_h_blocks_size, uv_w_blocks_size, uv_h_blocks_size, "./lenna_blocks_yuv.yuv");
-
+        save_yuv_blocks_to_file((const uint8_t ***)y_blocks, (const uint8_t ***)u_blocks, (const uint8_t ***)v_blocks, y_w_blocks_size, y_h_blocks_size, uv_w_blocks_size, uv_h_blocks_size, "./lenna_blocks_yuv.yuv");
 
     // [4] 离散余弦变换 DCT
     // fix: 不能在栈上分配内存，会爆掉
@@ -189,83 +224,69 @@ int main() {
     // float u_blocks_dct[block_size][64];
     // float v_blocks_dct[block_size][64];
     // 在堆上分配内存
-    // 二维数组，每一行都是固定的64列
-    // 二重指针，存储的是y_blocks_size大小的 int *指针
-    int ** y_blocks_dct = (int **)malloc(sizeof(int*) * y_blocks_size);
-    // 上面申请的int *指针，又申请64个int内存，赋值给该指针
-    for (int i = 0; i < y_blocks_size; i++) y_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
-    int ** u_blocks_dct = (int **)malloc(sizeof(int*) * uv_blocks_size);
-    for (int i = 0; i < uv_blocks_size; i++) u_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
-    int ** v_blocks_dct = (int **)malloc(sizeof(int*) * uv_blocks_size);
-    for (int i = 0; i < uv_blocks_size; i++) v_blocks_dct[i] = (int*)malloc(sizeof(int) * 64);
+    // 三维数组，数组的每一项存储的都是指向一块64大小的指针
+    // 三重指针
+    int *** y_blocks_dct, *** u_blocks_dct, *** v_blocks_dct;
+    ALLOCATE_3D_ARRAY((y_blocks_dct), int, y_h_blocks_size, y_w_blocks_size, 64);
+    ALLOCATE_3D_ARRAY((u_blocks_dct), int, uv_h_blocks_size, uv_w_blocks_size, 64);
+    ALLOCATE_3D_ARRAY((v_blocks_dct), int, uv_h_blocks_size, uv_w_blocks_size, 64);
     // 最原始版本的 DCT 很慢，处理 512*512 的原图要花费 12.29s
-    // for (int i = 0; i < block_size; i++) {
-    //     block_dct(y_blocks[i], y_blocks_dct[i]);
-    //     block_dct(u_blocks[i], u_blocks_dct[i]);
-    //     block_dct(v_blocks[i], v_blocks_dct[i]);
-    // }
+    // 
     // 参考 https://github.com/binglingziyu/audio-video-blog-demos/blob/master/15-rgb-to-jpeg/rgb-to-jpeg.c 
     // 快速傅里叶变换的使得复杂度从 O(N^2) 降低到 N/log_2N
     // 处理512*512 的原图只花费 11ms, 复杂度降低了1000倍
     init_dct_module();
-    for (int i = 0; i < y_blocks_size; i++) {
-        // 二重指针通过数组索引访问，获取一重指针，即一行数据的地址
-        uint8_t* y_block = y_blocks[i];
-        int* y_block_dct = y_blocks_dct[i];
-        // level shift, 把值域从[0,255]移动到[-128,127]
-        for (int j = 0; j < 64; j++) y_block_dct[j] = y_block[j] - 128;
-        for (int j = 0; j < 64; j++) y_block_dct[j] = y_block_dct[j] << 2;
-        fdct2d8x8(y_block_dct, NULL);
-    #ifdef YUV420
+    for (int i = 0; i < y_h_blocks_size; i++) {
+        for (int j = 0; j < y_w_blocks_size; j++) {
+            // 二重指针通过数组索引访问，获取一重指针，即一行数据的地址
+            uint8_t* y_block = y_blocks[i][j];
+            int* y_block_dct = y_blocks_dct[i][j];
+            // level shift, 把值域从[0,255]移动到[-128,127]
+            for (int k = 0; k < 64; k++) y_block_dct[k] = y_block[k] - 128;
+            for (int k = 0; k < 64; k++) y_block_dct[k] = y_block_dct[k] << 2;
+            // [DCT变换]
+            fdct2d8x8(y_block_dct, NULL);
+            // [量化] jpeg指定压缩质量1~99
+            // y - lumain table
+            quant_encode(y_block_dct, STD_QUANT_LUMIN_TABLE);
+            // [Zigzag扫描]
+            zigzag_encode(y_block_dct, ZIGZAG_TABLE);
+        }
     }
-    for (int i = 0; i < uv_blocks_size; i++) {
-    #endif
-        uint8_t* u_block = u_blocks[i];
-        int* u_block_dct = u_blocks_dct[i];
-        // level shift, 把值域从[0,255]移动到[-128,127]
-        for (int j = 0; j < 64; j++) u_block_dct[j] = u_block[j] - 128;
-        for (int j = 0; j < 64; j++) u_block_dct[j] = u_block_dct[j] << 2;
-        fdct2d8x8(u_block_dct, NULL);
+    for (int i = 0; i < uv_h_blocks_size; i++) {
+        for (int j = 0; j < uv_w_blocks_size; j++) {
+            // 二重指针通过数组索引访问，获取一重指针，即一行数据的地址
+            uint8_t* u_block = u_blocks[i][j];
+            int* u_block_dct = u_blocks_dct[i][j];
+            // level shift, 把值域从[0,255]移动到[-128,127]
+            for (int k = 0; k < 64; k++) u_block_dct[k] = u_block[k] - 128;
+            for (int k = 0; k < 64; k++) u_block_dct[k] = u_block_dct[k] << 2;
+            // [DCT变换]
+            fdct2d8x8(u_block_dct, NULL);
+            // [量化] jpeg指定压缩质量1~99
+            // u/v - chrom table
+            quant_encode(u_block_dct, STD_QUANT_CHROM_TABLE);
+            // [Zigzag扫描]
+            zigzag_encode(u_block_dct, ZIGZAG_TABLE);
 
-        uint8_t* v_block = v_blocks[i];
-        int* v_block_dct = v_blocks_dct[i];
-        // level shift, 把值域从[0,255]移动到[-128,127]
-        for (int j = 0; j < 64; j++) v_block_dct[j] = v_block[j] - 128;
-        for (int j = 0; j < 64; j++) v_block_dct[j] = v_block_dct[j] << 2;
-        fdct2d8x8(v_block_dct, NULL);
+            // 二重指针通过数组索引访问，获取一重指针，即一行数据的地址
+            uint8_t* v_block = v_blocks[i][j];
+            int* v_block_dct = v_blocks_dct[i][j];
+            // level shift, 把值域从[0,255]移动到[-128,127]
+            for (int k = 0; k < 64; k++) v_block_dct[k] = v_block[k] - 128;
+            for (int k = 0; k < 64; k++) v_block_dct[k] = v_block_dct[k] << 2;
+            // [DCT变换]
+            fdct2d8x8(v_block_dct, NULL);
+            // [量化] jpeg指定压缩质量1~99
+            // u/v - chrom table
+            quant_encode(v_block_dct, STD_QUANT_CHROM_TABLE);
+            // [Zigzag扫描]
+            zigzag_encode(v_block_dct, ZIGZAG_TABLE);
+        }
     }
-    clock_t time_end_dct = clock();
-    printf("KPI-dct: %f ms\n", (double)(time_end_dct - time_end_split_blocks) / CLOCKS_PER_SEC * 1000);
+    clock_t time_dct_quant_zigzag = clock();
+    printf("KPI-dct/quant/zigzag scan: %f ms\n", (double)(time_dct_quant_zigzag - time_end_split_blocks) / CLOCKS_PER_SEC * 1000);
 
-
-    // [量化] jpeg指定压缩质量1~99
-    for (int i = 0; i < y_blocks_size; i++) {
-        // y - lumain table
-        quant_encode(y_blocks_dct[i], STD_QUANT_LUMIN_TABLE);
-    #ifdef YUV420
-    }
-    for (int i = 0; i < uv_blocks_size; i++) {
-    #endif
-        // u/v - chrom table
-        quant_encode(u_blocks_dct[i], STD_QUANT_CHROM_TABLE);
-        quant_encode(v_blocks_dct[i], STD_QUANT_CHROM_TABLE);
-    }
-    clock_t time_quant = clock();
-    printf("KPI-quant: %f ms\n", (double)(time_quant - time_end_dct) / CLOCKS_PER_SEC * 1000);
-
-
-    // [Zigzag扫描]
-    for (int i = 0; i < y_blocks_size; i++) {
-        zigzag_encode(y_blocks_dct[i], ZIGZAG_TABLE);
-    #ifdef YUV420
-    }
-    for (int i = 0; i < uv_blocks_size; i++) {
-    #endif
-        zigzag_encode(u_blocks_dct[i], ZIGZAG_TABLE);
-        zigzag_encode(v_blocks_dct[i], ZIGZAG_TABLE);
-    }
-    clock_t time_zigzag_scan = clock();
-    printf("KPI-zigzag scan: %f ms\n", (double)(time_zigzag_scan - time_quant)/ CLOCKS_PER_SEC * 1000);
 
     // [DC系数的差分脉冲调制解码]
     // [DC系数的中间格式计算]
@@ -281,10 +302,12 @@ int main() {
     // YUV444 sample, yuv分块存储
     // yuv分块交叉存储，而不是连续存储yuv各自的所有分块，优点是在解码时可以加载一个y分块，u分块，v分块后解析出该块8x8的图片像素数据，再加载解析下一个分块
     // 若是yuv连续存储，那么会需要全部加载所有的分块到内存后，再依次解析各分块信息，这堆内存挑战很大
-    for (int i = 0; i < y_blocks_size; i++) {
-        dc_ac_huffman_encode(y_blocks_dct[i], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-        dc_ac_huffman_encode(u_blocks_dct[i], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
-        dc_ac_huffman_encode(v_blocks_dct[i], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+    for (int i = 0; i < y_h_blocks_size; i++) {
+        for (int j = 0; j < y_w_blocks_size; j++) {
+            dc_ac_huffman_encode(y_blocks_dct[i][j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(u_blocks_dct[i][j], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(v_blocks_dct[i][j], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+        }
     }
     #else
     // yuv420 sample, 存储2x2的y分块，再存储1个u分块，1个v分块
@@ -292,15 +315,15 @@ int main() {
     for (int i = 0; i < y_h_blocks_size; i += 2) {
         for (int j = 0; j < y_w_blocks_size; j += 2) {
             // 编码并存储相邻的2x2 y 分块
-            dc_ac_huffman_encode(y_blocks_dct[i * y_w_blocks_size + j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-            dc_ac_huffman_encode(y_blocks_dct[i * y_w_blocks_size + j + 1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-            dc_ac_huffman_encode(y_blocks_dct[(i + 1) * y_w_blocks_size + j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-            dc_ac_huffman_encode(y_blocks_dct[(i + 1) * y_w_blocks_size + j + 1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[i][j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[i][j+1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[i+1][j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[i+1][j+1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
 
             // 编码并存储对应的u分块
-            dc_ac_huffman_encode(u_blocks_dct[i / 2  * y_w_blocks_size/2 + j/2], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(u_blocks_dct[i/2][j/2], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
             // 编码并存储对应的v分块
-            dc_ac_huffman_encode(v_blocks_dct[i / 2 * y_w_blocks_size/2 + j/2], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(v_blocks_dct[i/2][j/2], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
         }
     }
     #endif
@@ -310,7 +333,7 @@ int main() {
         printf("data length: %ld\n", data_length);
     }
     clock_t time_huffman_encode = clock();
-    printf("KPI-huffman encode: %f ms\n", (double)(time_huffman_encode - time_zigzag_scan)/ CLOCKS_PER_SEC * 1000);
+    printf("KPI-huffman encode: %f ms\n", (double)(time_huffman_encode - time_dct_quant_zigzag)/ CLOCKS_PER_SEC * 1000);
 
     
     // [write to file]
@@ -446,22 +469,40 @@ int main() {
 
     free(buffer);
     // free memory
-    for (int i = 0; i < y_blocks_size; i++) {
-        free(y_blocks[i]);
-        free(y_blocks_dct[i]);
-    }
-    free(y_blocks);
-    free(y_blocks_dct);
-    for (int i = 0; i < uv_blocks_size; i++) {
-        free(u_blocks[i]);
-        free(u_blocks_dct[i]);
-        free(v_blocks[i]);
-        free(v_blocks_dct[i]);
-    }
-    free(u_blocks);
-    free(u_blocks_dct);
-    free(v_blocks);
-    free(v_blocks_dct);
+    FREE_3D_ARRAY(y_blocks, y_h_blocks_size, y_w_blocks_size);
+    FREE_3D_ARRAY(u_blocks, uv_h_blocks_size, uv_w_blocks_size);
+    FREE_3D_ARRAY(v_blocks, uv_h_blocks_size, uv_w_blocks_size);
+    FREE_3D_ARRAY(y_blocks_dct, y_h_blocks_size, y_w_blocks_size);
+    FREE_3D_ARRAY(u_blocks_dct, uv_h_blocks_size, uv_w_blocks_size);
+    FREE_3D_ARRAY(v_blocks_dct, uv_h_blocks_size, uv_w_blocks_size);
+    // todo remove
+    // for (int i = 0; i < y_h_blocks_size; i++) {
+    //     for (int j = 0; j < y_w_blocks_size; j++) {
+    //         free(y_blocks[i][j]);
+    //         free(y_blocks_dct[i][j]);
+    //     }
+    //     free(y_blocks[i]);
+    //     free(y_blocks_dct[i]);
+    // }
+    // free(y_blocks);
+    // free(y_blocks_dct);
+    // for (int i = 0; i < uv_h_blocks_size; i++) {
+    //     for (int j = 0; j < uv_w_blocks_size; j++)
+    //     {
+    //         free(u_blocks[i][j]);
+    //         free(u_blocks_dct[i][j]);
+    //         free(v_blocks[i][j]);
+    //         free(v_blocks_dct[i][j]);
+    //     }
+    //     free(u_blocks[i]);
+    //     free(u_blocks_dct[i]);
+    //     free(v_blocks[i]);
+    //     free(v_blocks_dct[i]);
+    // }
+    // free(u_blocks);
+    // free(u_blocks_dct);
+    // free(v_blocks);
+    // free(v_blocks_dct);
 }
 
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename) {
@@ -475,28 +516,28 @@ void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t*
     fclose(fp);
 }
 
-void save_yuv_blocks_to_file(const uint8_t ** y_blocks, const uint8_t ** u_blocks, const uint8_t ** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, const char* filename) {
+void save_yuv_blocks_to_file(const uint8_t *** y_blocks, const uint8_t *** u_blocks, const uint8_t *** v_blocks, const size_t y_w_blocks_size, const size_t y_h_blocks_size, const size_t uv_w_blocks_size, const size_t uv_h_blocks_size, const char* filename) {
     if (DEBUG == 1)
         printf("y_w_blocks_size: %d, y_h_blocks_size: %d, uv_w_blocks_size: %d, uv_h_blocks_size: %d\n", y_w_blocks_size, y_h_blocks_size, uv_w_blocks_size, uv_h_blocks_size);
     FILE* fp_block = fopen(filename, "wb");
     for (int i = 0; i < y_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
             for (int j = 0; j < y_w_blocks_size; j++) {
-                fwrite(y_blocks[i * y_w_blocks_size + j] + k * 8, 1, 8, fp_block);
+                fwrite(y_blocks[i][j] + k * 8, 1, 8, fp_block);
             }
         }
     }
     for (int i = 0; i < uv_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
             for (int j = 0; j < uv_w_blocks_size; j++) {
-                fwrite(u_blocks[i * uv_w_blocks_size + j] + k * 8, 1, 8, fp_block);
+                fwrite(u_blocks[i][j] + k * 8, 1, 8, fp_block);
             }
         }
     }
     for (int i = 0; i < uv_h_blocks_size; i++) {
         for (int k = 0; k < 8; k++) {
             for (int j = 0; j < uv_w_blocks_size; j++) {
-                fwrite(v_blocks[i * uv_w_blocks_size + j] + k * 8, 1, 8, fp_block);
+                fwrite(v_blocks[i][j] + k * 8, 1, 8, fp_block);
             }
         }
     }
@@ -556,25 +597,29 @@ void yuv420_sample(uint8_t *yuv_y, uint8_t * yuv_u, uint8_t *yuv_v, int * y_widt
 }
 
 /**
- * @param ***blocks 要创建一个二维数组，那么需要在该function中修改一个二重指针，故传参三重指针
+ * @param ***blocks 要创建一个三维数组，那么需要在该function中修改一个三重指针，故传参四重指针
  * @param *w_blocks_size  width方向被分割的块数
  * @param *h_blocks_size  height方向被分割的块数
  */
-void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ***blocks, size_t * w_blocks_size, size_t * h_blocks_size)
+void block_data_8x8(const uint8_t* data, const unsigned int width, const unsigned int height, uint8_t ****blocks, size_t * w_blocks_size, size_t * h_blocks_size)
 {
     *h_blocks_size = height / 8 + (height % 8 == 0 ? 0 : 1);
     *w_blocks_size = width / 8 + (width % 8 == 0 ? 0 : 1);
     int blocks_size = (*h_blocks_size) * (*w_blocks_size);
-    // 先申请一维数组，存储所有的8x8块的地址指针
-    // *blocks 是三重指针的解引用，结果是二重指针
-    *blocks = (uint8_t **)malloc(blocks_size * sizeof(uint8_t *));
+    ALLOCATE_3D_ARRAY((*blocks), uint8_t, (*h_blocks_size), (*w_blocks_size), 64);
+    // // *blocks 是四重指针的解引用，结果是三重指针
+    // // 先申请一维数组，存储(*h_blocks_size)大小的 uint8_t **二重指针
+    // *blocks = (uint8_t ***)malloc((*h_blocks_size) * sizeof(uint8_t **));
     // 左上角坐标（0,0), 右下角坐标(height, width)
     // row in [0, height], column in [0, width]
     for (int row = 0; row < (*h_blocks_size); row++) {
+        // // 再申请第2维度数组， 存储(*w_blocks_size)大小的 uint8_t *一重指针
+        // (*blocks)[row] = (uint8_t **)malloc((*w_blocks_size) * sizeof(uint8_t *));
         for (int col = 0; col < (*w_blocks_size); col++) {
-            // 再申请8x8块
-            uint8_t *block = (uint8_t *)malloc(sizeof(uint8_t) * 64);
-            (*blocks)[row * (*w_blocks_size) + col] = block;
+            // // 再申请第3维度数组, 存储 64 大小的 uint8_t 
+            // uint8_t *block = (uint8_t *)malloc(sizeof(uint8_t) * 64);
+            // (*blocks)[row][col] = block;
+            uint8_t *block = (*blocks)[row][col];
             for (int sub_row = 0; sub_row < 8; sub_row++) {
                 for (int sub_col = 0; sub_col < 8; sub_col++) {
                     int data_row = row * 8 + sub_row;
@@ -597,23 +642,25 @@ double ck(float k) {
     else return sqrt(2.0 / DCT_SIZE);
 }
 
-void block_dct(uint8_t* in, int* out)
-{
-    double sum = 0;
-    for (int u = 0; u < DCT_SIZE; u++) {
-        for (int v = 0; v < DCT_SIZE; v++) {
-            for (int i = 0; i < DCT_SIZE; i++) {
-                for (int j = 0; j < DCT_SIZE; j++) {
-                    // M_PI is included in <math.h>
-                    // -128 是level shift, 这样才能把值域从０－255映射到－128－127
-                    sum += (in[i * DCT_SIZE + j] - 128) * cos((2 * i + 1) * u * M_PI / (2 * DCT_SIZE)) * cos((2 * j + 1) * v * M_PI / (2 * DCT_SIZE));
-                }
-            }
-            out[u * DCT_SIZE + v] = sum * ck(u) * ck(v);
-            sum = 0.0;
-        }
-    }
-}
+// deprecated
+//  原始的DCT变换，速度非常的慢
+// void block_dct(uint8_t* in, int* out)
+// {
+//     double sum = 0;
+//     for (int u = 0; u < DCT_SIZE; u++) {
+//         for (int v = 0; v < DCT_SIZE; v++) {
+//             for (int i = 0; i < DCT_SIZE; i++) {
+//                 for (int j = 0; j < DCT_SIZE; j++) {
+//                     // M_PI is included in <math.h>
+//                     // -128 是level shift, 这样才能把值域从０－255映射到－128－127
+//                     sum += (in[i * DCT_SIZE + j] - 128) * cos((2 * i + 1) * u * M_PI / (2 * DCT_SIZE)) * cos((2 * j + 1) * v * M_PI / (2 * DCT_SIZE));
+//                 }
+//             }
+//             out[u * DCT_SIZE + v] = sum * ck(u) * ck(v);
+//             sum = 0.0;
+//         }
+//     }
+// }
 
 void quant_encode(int block[64], const uint8_t table[64])
 {
