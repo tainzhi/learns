@@ -1,5 +1,6 @@
 # info
 用c实现的jpeg encoder, 读取 lenna.png, 编码后输出到 lenna.jpeg
+- 通过是否注释 `#define YUV420`可以使用YUV444/YUV420采样
 
 # Usage
 ```shell
@@ -9,7 +10,7 @@ cmake -S. -Bbuild -G "MinGW Makefiles"
 # 构建到 build 目录
 cmake --build build
 
-# 构建成功后
+# 构建成功后, 读取lenna.png，编码后输出到 lenna.jpeg
 ./build/jpeg_encoder.exe
 ```
 # jpeg编码原理
