@@ -9,9 +9,10 @@
 #include <stdint.h>
 
 #define YUV420  // 注释掉该行，则YUV444采样
+// 1 打印较详细的运行信息，0 不打印
+const int DEBUG = 1;
 
 #define DCT_SIZE 8
-const int DEBUG = 1;
 
 const uint8_t STD_QUANT_LUMIN_TABLE[64] = {
     16, 11, 10, 16, 24, 40, 51, 61,
@@ -146,7 +147,6 @@ int main() {
 
 
     // [2] sample
-    // todo: sample YUV444 to YUV420
     int y_width = width, y_height = height;
     int uv_width = width, uv_height = height;
     #ifdef YUV420
@@ -204,7 +204,7 @@ int main() {
     //     block_dct(u_blocks[i], u_blocks_dct[i]);
     //     block_dct(v_blocks[i], v_blocks_dct[i]);
     // }
-    // todo: 参考 https://github.com/binglingziyu/audio-video-blog-demos/blob/master/15-rgb-to-jpeg/rgb-to-jpeg.c 
+    // 参考 https://github.com/binglingziyu/audio-video-blog-demos/blob/master/15-rgb-to-jpeg/rgb-to-jpeg.c 
     // 快速傅里叶变换的使得复杂度从 O(N^2) 降低到 N/log_2N
     // 处理512*512 的原图只花费 11ms, 复杂度降低了1000倍
     init_dct_module();
