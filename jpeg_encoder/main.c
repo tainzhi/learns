@@ -8,7 +8,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-// #define YUV420
+#define YUV420  // 注释掉该行，则YUV444采样
 
 #define DCT_SIZE 8
 const int DEBUG = 1;
@@ -277,15 +277,33 @@ int main() {
     char *buffer = (char *)malloc(width * height * 2);
     int buffer_max_width = width * height * 2;
     void *bs = bitstr_open(BITSTR_MEM, buffer, &buffer_max_width);
+    #ifndef YUV420
+    // YUV444 sample, yuv分块存储
+    // yuv分块交叉存储，而不是连续存储yuv各自的所有分块，优点是在解码时可以加载一个y分块，u分块，v分块后解析出该块8x8的图片像素数据，再加载解析下一个分块
+    // 若是yuv连续存储，那么会需要全部加载所有的分块到内存后，再依次解析各分块信息，这堆内存挑战很大
     for (int i = 0; i < y_blocks_size; i++) {
         dc_ac_huffman_encode(y_blocks_dct[i], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
-    #ifdef YUV420
-    }
-    for (int i = 0; i < uv_blocks_size; i++) {
-    #endif   
         dc_ac_huffman_encode(u_blocks_dct[i], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
         dc_ac_huffman_encode(v_blocks_dct[i], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
     }
+    #else
+    // yuv420 sample, 存储2x2的y分块，再存储1个u分块，1个v分块
+    // 依次存储4x8x8 y分量，8x8 u分量，8x8 v 分量
+    for (int i = 0; i < y_h_blocks_size; i += 2) {
+        for (int j = 0; j < y_w_blocks_size; j += 2) {
+            // 编码并存储相邻的2x2 y 分块
+            dc_ac_huffman_encode(y_blocks_dct[i * y_w_blocks_size + j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[i * y_w_blocks_size + j + 1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[(i + 1) * y_w_blocks_size + j], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+            dc_ac_huffman_encode(y_blocks_dct[(i + 1) * y_w_blocks_size + j + 1], dc + 0, lumin_dc_huffman_code_tree, lumin_ac_huffman_code_tree, bs);
+
+            // 编码并存储对应的u分块
+            dc_ac_huffman_encode(u_blocks_dct[i / 2  * y_w_blocks_size/2 + j/2], dc + 1, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+            // 编码并存储对应的v分块
+            dc_ac_huffman_encode(v_blocks_dct[i / 2 * y_w_blocks_size/2 + j/2], dc + 2, chrom_dc_huffman_code_tree, chrom_ac_huffman_code_tree, bs);
+        }
+    }
+    #endif
     long data_length = bitstr_tell(bs);
     if (DEBUG == 1)
     {
@@ -343,15 +361,19 @@ int main() {
     fputc(3, fp);
     // vertical sample factor, horizontal sample factor, quantizaton table
     // Y U V 的 id 分别是0x01, 0x02, 0x03
-    // 这里是YUV444采样，三者采样因子都是 0x11； 若是 YUV420采样，则三者采样因子是 0x22, 0x11, 0x11
+    // 若是 YUV420采样，则三者采样因子是 0x22, 0x11, 0x11
+    // 若是 YUV422采样，则三者采样因子时 0x21, 0x11, 0x11
+    // 这里是YUV444采样，三者采样因子都是 0x11；
     // 最后一列则是 quantization table id
     // y-0x01 使用 STD_QUANT_LUMIN_TABLE 0x00
     // u-0x02 和 v-0x03 使用 STD_QUANT_CHROM_TABLE 0x01
     #ifndef YUV420
+    // YUV444采样，三者采样因子都是 0x11；
     fputc(0x01, fp); fputc(0x11, fp); fputc(0x00, fp);
     fputc(0x02, fp); fputc(0x11, fp); fputc(0x01, fp);
     fputc(0x03, fp); fputc(0x11, fp); fputc(0x01, fp);
     #else
+    // YUV420采样，三者采样因子是 0x22, 0x11, 0x11
     fputc(0x01, fp); fputc(0x22, fp); fputc(0x00, fp);
     fputc(0x02, fp); fputc(0x11, fp); fputc(0x01, fp);
     fputc(0x03, fp); fputc(0x11, fp); fputc(0x01, fp);
@@ -667,11 +689,15 @@ void build_huffman_tree() {
     build_huffman_tree_from_std(STD_HUFFMAN_CHROM_AC, chrom_ac_huffman_code_tree);
 }
 
+/**
+ * huffman编码对应的分块，并存储到缓存bs中
+ */
 void dc_ac_huffman_encode(const int block[64], int * dc, const HUFCODEITEM * dc_huffman_code_tree, const HUFCODEITEM * ac_huffman_code_tree, void * bs)
 {
     RELEITEM rlelist[63];
     int diff, code, code_bit_len;
     int i, j, num_0_before_code, eob;
+    // 相邻块的首域值的差异
     diff = block[0] - *dc;
     *dc = block[0];
     code = diff;
