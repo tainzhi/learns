@@ -467,42 +467,14 @@ int main() {
     clock_t time_save_jpeg = clock();
     printf("KPI-save jpeg: %f ms\n", (double)(time_save_jpeg - time_huffman_encode)/ CLOCKS_PER_SEC * 1000);
 
-    free(buffer);
     // free memory
+    free(buffer);
     FREE_3D_ARRAY(y_blocks, y_h_blocks_size, y_w_blocks_size);
     FREE_3D_ARRAY(u_blocks, uv_h_blocks_size, uv_w_blocks_size);
     FREE_3D_ARRAY(v_blocks, uv_h_blocks_size, uv_w_blocks_size);
     FREE_3D_ARRAY(y_blocks_dct, y_h_blocks_size, y_w_blocks_size);
     FREE_3D_ARRAY(u_blocks_dct, uv_h_blocks_size, uv_w_blocks_size);
     FREE_3D_ARRAY(v_blocks_dct, uv_h_blocks_size, uv_w_blocks_size);
-    // todo remove
-    // for (int i = 0; i < y_h_blocks_size; i++) {
-    //     for (int j = 0; j < y_w_blocks_size; j++) {
-    //         free(y_blocks[i][j]);
-    //         free(y_blocks_dct[i][j]);
-    //     }
-    //     free(y_blocks[i]);
-    //     free(y_blocks_dct[i]);
-    // }
-    // free(y_blocks);
-    // free(y_blocks_dct);
-    // for (int i = 0; i < uv_h_blocks_size; i++) {
-    //     for (int j = 0; j < uv_w_blocks_size; j++)
-    //     {
-    //         free(u_blocks[i][j]);
-    //         free(u_blocks_dct[i][j]);
-    //         free(v_blocks[i][j]);
-    //         free(v_blocks_dct[i][j]);
-    //     }
-    //     free(u_blocks[i]);
-    //     free(u_blocks_dct[i]);
-    //     free(v_blocks[i]);
-    //     free(v_blocks_dct[i]);
-    // }
-    // free(u_blocks);
-    // free(u_blocks_dct);
-    // free(v_blocks);
-    // free(v_blocks_dct);
 }
 
 void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t* yuv_v, const unsigned int width, const unsigned int height, const char* filename) {
