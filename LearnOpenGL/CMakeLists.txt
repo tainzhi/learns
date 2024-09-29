@@ -1,7 +1,7 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.18)
 
-# enable C++17
-set(CMAKE_CXX_STANDARD 17)
+# enable C++23
+set(CMAKE_CXX_STANDARD 23)
 
 project (myLearnOpenGL)
 
@@ -55,18 +55,46 @@ set_target_properties(glfw3 PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/glfw3/include"
 )
 
+# assimp
+if(CMAKE_CXX_COMPILER MATCHES ".*mingw.*")  
+        message(STATUS "MinGW compiler detected, so link assimp mingw library")  
+        # download from msys2 packege: https://packages.msys2.org/packages/mingw-w64-x86_64-assimp
+        set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/assimp/lib/mingw/libassimp.a")
+else()  
+        message(FATAL_ERROR "no assimp library for non-mingw compilers, please set one")
+        return()
+        # if(CMAKE_SYSTEM_NAME MATCHES "Linux") 
+        #         message(STATUS "link glfw3 linux library")  
+        #         set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/glfw3/lib/Linux/libglfw3.a")
+        # elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+        #         message(STATUS "link glfw3 windows library")  
+        #         set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/glfw3/lib/Windows/glfw3.lib")
+        # elseif(CMAKE_SYSTEM_NAME MATCHES "FreeBSD") 
+        #         message(STATUS "link glfw3 apple library")  
+        #         set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/glfw3/lib/Apple/libglfw3.a")
+        # endif()
+endif()
+add_library(assimp STATIC IMPORTED)
+set_target_properties(assimp PROPERTIES
+        IMPORTED_LOCATION ${ASSIMP_LIB}
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/assimp/include"
+)
+
 # add_library(soil STATIC IMPORTED)
 # set_target_properties(soil PROPERTIES IMPORTED_LOCATION ${CMAKE_SOURCE_DIR}/lib/libSOIL.a)
 #添加头文件
 include_directories(
         ${CMAKE_SOURCE_DIR}/include
         "${PROJECT_SOURCE_DIR}/glad/include/"
+        "${PROJECT_SOURCE_DIR}/assimp/include/"
 )
 
-# 生成可执行文件 ${PROJECT_NAME}
-add_executable(${PROJECT_NAME} ${GLAD_SRC} ${MAIN_SRC})
+# # 生成可执行文件 ${PROJECT_NAME}
+# add_executable(${PROJECT_NAME} ${GLAD_SRC} ${MAIN_SRC})
+# # 为可执行文件${PROJECT_NAME}添加共享库链接
+# target_link_libraries(${PROJECT_NAME} 
+#         glfw3
+# )
 
-# 为可执行文件${PROJECT_NAME}添加共享库链接
-target_link_libraries(${PROJECT_NAME} 
-        glfw3
-)
+add_executable(qiu ${PROJECT_SOURCE_DIR}/main.cpp ${PROJECT_SOURCE_DIR}/stb_image.cpp ${GLAD_SRC})
+target_link_libraries(qiu glfw3 assimp)
