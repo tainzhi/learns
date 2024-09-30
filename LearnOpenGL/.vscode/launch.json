@@ -8,7 +8,7 @@
             "name": "mingw gdb",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/myLearnOpenGL",
+            "program": "${workspaceFolder}/build/3.Model_Loading.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
@@ -17,7 +17,7 @@
             "MIMode": "gdb",
             "miDebuggerPath": "gdb",
             // 在debug之前，先构建好要debug的程序
-            "preLaunchTask": "build",
+            // "preLaunchTask": "build",
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",
