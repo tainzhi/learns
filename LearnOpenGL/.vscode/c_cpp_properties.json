@@ -13,8 +13,9 @@
                 "${workspaceRoot}/**",
                 "${workspaceRoot}/include",
                 "${workspaceRoot}/build/configuration",
-                "${workspaceRoot}/glad/include",
-                "${workspaceRoot}/glfw3/include"
+                "${workspaceRoot}/3rd-libs/glad/include",
+                "${workspaceRoot}/3rd-libs/glfw3/include",
+                "${workspaceRoot}/3rd-libs/assimp/include"
             ],
             "defines": [
                 "_DEBUG",
@@ -22,21 +23,22 @@
                 "_UNICODE"
             ],
             "cStandard": "c17",
-            "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "windows-gcc-x64",
             "browse": {
-                // "path": [
-                //     "${workspaceRoot}/**",
-                //     "${workspaceRoot}/include",
-                //     "${workspaceRoot}/build/configuration",
-                //     "${workspaceRoot}/glad/include",
-                //     "${workspaceRoot}/glfw3/include"
-                // ],
+                "path": [
+                    "${workspaceRoot}/**",
+                    "${workspaceRoot}/include",
+                    "${workspaceRoot}/build/configuration",
+                    "${workspaceRoot}/3rd-libs/glad/include",
+                    "${workspaceRoot}/3rd-libs/glfw3/include",
+                    "${workspaceRoot}/3rd-libs/assimp/include"
+                ],
                 "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": ""
             },
             "windowsSdkVersion": "10.0.22000.0",
-            "compilerPath": "cl.exe",
+            "compilerPath": "C:/Users/qiufq1/scoop/apps/mingw/current/bin/g++.exe"
         },
         {
             "name": "Mac",

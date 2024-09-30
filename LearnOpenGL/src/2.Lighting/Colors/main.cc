@@ -65,8 +65,8 @@ int main()
         return -1;
     }
 
-    Shader objectShader(FileSystem::getShaderPath("object.vs").c_str(), FileSystem::getShaderPath("object.fs").c_str());
-    Shader lightShader(FileSystem::getShaderPath("light.vs").c_str(), FileSystem::getShaderPath("light.fs").c_str());
+    Shader objectShader((GET_CURRENT_PARENT_PATH() / "object.vs").string().c_str(), (GET_CURRENT_PARENT_PATH() / "object.fs").string().c_str());
+    Shader lightShader((GET_CURRENT_PARENT_PATH() / "light.vs").string().c_str(), (GET_CURRENT_PARENT_PATH() / "light.fs").string().c_str());
 
     glEnable(GL_DEPTH_TEST);
 
