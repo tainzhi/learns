@@ -2,13 +2,15 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <iostream>
-#include <filesystem.h>
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-#include "shader.h"
+#include <stb_image.h>
+#include <shader.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <print>
+#include <filesystem.h>
+
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 void processInput(GLFWwindow *window);
@@ -69,9 +71,10 @@ int main()
         return -1;
     }
 
-    // build and compile our shader zprogram
+
+    // build and compile our shader program
     // ------------------------------------
-    Shader ourShader(FileSystem::getShaderPath("texture.vs").c_str(), FileSystem::getShaderPath("texture.fs").c_str());
+    Shader ourShader((GET_CURRENT_PARENT_PATH() / "texture.vs").string().c_str(), (GET_CURRENT_PARENT_PATH()  / "texture.fs").string().c_str());
 
     glEnable(GL_DEPTH_TEST);
 
@@ -158,6 +161,7 @@ int main()
     int width, height, nrChannels;
     stbi_set_flip_vertically_on_load(true); // tell stb_image.h to flip loaded texture's on the y-axis.
     // The FileSystem::getPath(...) is part of the GitHub repository so we can find files on any IDE/platform; replace it with your own image path.
+    //todo 
     unsigned char *data = stbi_load(FileSystem::getResourcePath("resources/textures/container.jpg").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {
@@ -180,6 +184,7 @@ int main()
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load image, create texture and generate mipmaps
+    // todo
     data = stbi_load(FileSystem::getResourcePath("resources/textures/awesomeface.png").c_str(), &width, &height, &nrChannels, 0);
     if (data)
     {

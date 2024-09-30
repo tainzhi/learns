@@ -2,7 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <iostream>
-#include <filesystem.h>
+#include "filesystem.h"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 #include "shader.h"
@@ -54,7 +54,8 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader(FileSystem::getShaderPath("texture.vs").c_str(), FileSystem::getShaderPath("texture.fs").c_str());
+    Shader ourShader((GET_CURRENT_PARENT_PATH() / "texture.vs").string().c_str(), (GET_CURRENT_PARENT_PATH()  / "texture.fs").string().c_str());
+
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------
@@ -153,6 +154,8 @@ int main()
     // or set it via the texture class
     ourShader.setInt("texture2", 1);
 
+    unsigned int translationLocation = glGetUniformLocation(ourShader.ID, "transform");
+
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -166,6 +169,10 @@ int main()
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
+        glm::mat4 trans = glm::mat4(1.0f);
+        trans = glm::rotate(trans, (float)glfwGetTime() * mixValue * 24 , glm::vec3(0, 0, 1.0));
+        glUniformMatrix4fv(translationLocation, 1, GL_FALSE, glm::value_ptr(trans));
+
         // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture1);
@@ -176,21 +183,8 @@ int main()
         glBindTexture(GL_TEXTURE_2D, texture2);
 
 
-        glm::mat4 trans = glm::mat4(1.0f);
-        trans = glm::rotate(trans, (float)glfwGetTime(), glm::vec3(0, 0, 1.0));
-        // unsigned int translationLocation = glGetUniformLocation(ourShader.ID, "transform");
-        // glUniformMatrix4fv(translationLocation, 1, GL_FALSE, glm::value_ptr(trans));
-        ourShader.setMat4("transform", trans);
-        glBindVertexArray(VAO);
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        
-
-        trans = glm::mat4(1.0f);
-        trans = glm::translate(trans, glm::vec3(-0.5f, 0.5f, 0.0f));
-        float scaleAmount = sin(glfwGetTime());
-        trans = glm::scale(trans, glm::vec3(scaleAmount, scaleAmount, 1.0));
-        // glUniformMatrix4fv(translationLocation, 1, GL_FALSE, glm::value_ptr(trans));
-        ourShader.setMat4("transform", trans);
+        // render container
+        ourShader.use();
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 
