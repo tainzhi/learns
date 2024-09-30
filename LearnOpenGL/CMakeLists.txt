@@ -57,7 +57,7 @@ endif()
 add_library(assimp STATIC IMPORTED)
 set_target_properties(assimp PROPERTIES
         IMPORTED_LOCATION ${ASSIMP_LIB}
-        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/3rd-lib/assimp/include"
+        INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_SOURCE_DIR}/3rd-libs/assimp/include"
 )
 
 
@@ -71,17 +71,24 @@ include_directories(
         "${PROJECT_SOURCE_DIR}/3rd-libs/assimp/include/"
 )
 
-set(1_PROJECT "1.Gettings_Started")
-# Getting Started - camera - mouse
-file(GLOB CAMERA_MOUSE_SRC "${CMAKE_SOURCE_DIR}/src/${1_PROJECT}/camera/mouse/main.cc")
-add_executable(${1_PROJECT}_camera_mouse ${GLAD_SRC} ${CAMERA_MOUSE_SRC})
-# 为可执行文件${PROJECT_NAME}添加共享库链接
-target_link_libraries(${1_PROJECT}_camera_mouse 
-        glfw3
-)
+# todo: uncomment
+# set(1_PROJECT "1.Gettings_Started")
+# # Getting Started - camera - mouse
+# file(GLOB CAMERA_MOUSE_SRC "${CMAKE_SOURCE_DIR}/src/${1_PROJECT}/camera/mouse/main.cc")
+# add_executable(${1_PROJECT}_camera_mouse ${GLAD_SRC} ${CAMERA_MOUSE_SRC})
+# # 为可执行文件${PROJECT_NAME}添加共享库链接
+# target_link_libraries(${1_PROJECT}_camera_mouse 
+#         glfw3
+# )
 
+# todo: uncomment
+# set(2_PROJECT "2.Lighting")
+# file(GLOB 2_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${2_PROJECT}/Colors/*.cc")
+# add_executable(${2_PROJECT} ${GLAD_SRC} ${2_PROJECT_SRC})
+# target_link_libraries(${2_PROJECT} glfw3)
 
-set(2_PROJECT "2.Lighting")
-file(GLOB 2_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${2_PROJECT}/Colors/*.cc")
-add_executable(${2_PROJECT} ${GLAD_SRC} ${2_PROJECT_SRC})
-target_link_libraries(${2_PROJECT} glfw3)
+set(3_PROJECT "3.Model_Loading")
+file(GLOB 3_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${3_PROJECT}/*.cc")
+message(INFO "3_PROJECT_SRC=${3_PROJECT_SRC}")
+add_executable(${3_PROJECT} ${GLAD_SRC} ${3_PROJECT_SRC})
+target_link_libraries(${3_PROJECT} glfw3 assimp)
