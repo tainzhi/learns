@@ -187,6 +187,7 @@ int main() {
     int y_width = width, y_height = height;
     int uv_width = width, uv_height = height;
     #ifdef YUV420
+    // 默认采样是YUV444, 故YUV420需要先采样
     yuv420_sample(yuv_y, yuv_u, yuv_v, &y_width, &y_height, &uv_width, &uv_height);
     if (DEBUG == 1)
         printf("yuv420 sample, uv width:%d, uv height:%d\n", uv_width, uv_height);
@@ -482,9 +483,6 @@ void save_yuv_to_file(const uint8_t* yuv_y, const uint8_t* yuv_u, const uint8_t*
     fwrite(yuv_y, 1, width * height, fp);
     fwrite(yuv_u, 1, width * height, fp);
     fwrite(yuv_v, 1, width * height, fp);
-    // fwrite(yuv_y, width * height, 1,  fp);
-    // fwrite(yuv_u, width * height, 1, fp);
-    // fwrite(yuv_v, width * height, 1, fp);
     fclose(fp);
 }
 
@@ -528,15 +526,12 @@ void rgb2yuv(uint8_t* rgb, uint8_t* yuv_y, uint8_t* yuv_u, uint8_t* yuv_v, const
             uint8_t r = rgb[index * channel];
             uint8_t g = rgb[index * channel + 1];
             uint8_t b = rgb[index * channel + 2];
-
             float luma = 0.29900f * r + 0.58700f * g + 0.11400f * b;
             float cb = -0.16874f * r - 0.33126f * g + 0.50000f * b + 128;
             float cr = 0.50000f * r - 0.41869f * g - 0.08131f * b + 128;
             if (luma < 0 || cb < 0 || cr < 0) {
                 printf("luma: %f, cb: %f, cr: %f", luma, cb, cr);
             }
-
-            // YUV444 sample
             yuv_y[index] = (uint8_t)(luma);
             yuv_u[index] = (uint8_t)(cb);
             yuv_v[index] = (uint8_t)(cr);
@@ -569,6 +564,8 @@ void yuv420_sample(uint8_t *yuv_y, uint8_t * yuv_u, uint8_t *yuv_v, int * y_widt
 }
 
 /**
+ * 分块成 8x8的块, 不足补0
+ * 
  * @param ***blocks 要创建一个三维数组，那么需要在该function中修改一个三重指针，故传参四重指针
  * @param *w_blocks_size  width方向被分割的块数
  * @param *h_blocks_size  height方向被分割的块数
