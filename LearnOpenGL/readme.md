@@ -21,24 +21,21 @@ cmake -S. -Bbuild  -G "MinGW Makefiles"
 cmake --build build
 .\build\myLearOpenGL.exe
 ```
+## 依赖的第三方库
 
-## download and install [soil](https://github.com/littlstar/soil)
+### download and install [soil](https://github.com/littlstar/soil)
 - 不使用soil, 使用[stb_image](https://learnopengl-cn.github.io/01%20Getting%20started/06%20Textures/)
 - 图片路径只能绝对路径
 
-## [dowaload glm](https://github.com/g-truc/glm)
+### [dowaload glm](https://github.com/g-truc/glm)
 - a header-only library, and thus does not need to be compiled
 
-## [glfw](https://learnopengl.com/Getting-started/Creating-a-window)
+### [glfw](https://learnopengl.com/Getting-started/Creating-a-window)
 https://www.glfw.org/docs/latest/compile.html
 一般不需要重新配置，目前已经编译好 Apple/windows/mingw 系统的lib库。如果需要，可以自行编译添加
 
-## [assimp](https://github.com/assimp/assimp)
+### [assimp](https://github.com/assimp/assimp)
 官方库在Mingw下编译出错，故下载编译好的mingw assip库[msys2 assimp](https://packages.msys2.org/packages/mingw-w64-x86_64-assimp)
-
-## Reference
-- [LearnOpenGL光照](https://learnopengl-cn.github.io/02%20Lighting/02%20Basic%20Lighting/)
-- [不基于LearnOpenGL配置OpenGL的开发环境](https://blog.csdn.net/FatalFlower/article/details/108686549)
 
 ## 遇到的问题
 #### windows 10无法找到动态库 dll

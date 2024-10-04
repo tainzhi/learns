@@ -52,7 +52,7 @@ int main()
 
     // build and compile our shader zprogram
     // ------------------------------------
-    Shader ourShader(FileSystem::getShaderPath("texture.vs").c_str(), FileSystem::getShaderPath("texture.fs").c_str());
+    Shader ourShader((GET_CURRENT_PARENT_PATH() / "texture.vs").string().c_str(), (GET_CURRENT_PARENT_PATH() / "texture.fs").string().c_str());
 
     // set up vertex data (and buffer(s)) and configure vertex attributes
     // ------------------------------------------------------------------

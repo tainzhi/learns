@@ -106,10 +106,6 @@ int main()
         0.6f, 0.0f, 0.0f,
         0.3f,0.6f, 0.0f, 
         -0.3f, -0.6f, 0.0f,
-        0.0f,0.0f, 0.0f,
-        0.0f,-1.0f,0.0f,
-        1.0f, 0.0f,0.0f,
-
     };
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO);
@@ -154,7 +150,7 @@ int main()
         glUseProgram(shaderProgram);
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
-        glDrawArrays(GL_TRIANGLES, 0, 9);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
  
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
