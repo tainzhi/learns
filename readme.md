@@ -1,7 +1,7 @@
 # learns
 我的一些学习项目
 
-## [jpeg encoder](./jpeg_encoder/)
+## :star:[jpeg encoder](./jpeg_encoder/)
 用c实现的无依赖的jpeg编码器，读取png图片，编码后输出jpeg图片，可选YUV444或YUV420采样
 
 ## [LearnOpenGL](./LearnOpenGL/)
