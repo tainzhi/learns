@@ -94,7 +94,12 @@ include_directories(
 # add_executable(${3_PROJECT} ${GLAD_SRC} ${3_PROJECT_SRC})
 # target_link_libraries(${3_PROJECT} glfw3 assimp)
 
+# set(4_PROJECT "4.Advanced_OpenGL")
+# file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/FrameBuffers/*.cc")
+# add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
+# target_link_libraries(${4_PROJECT} glfw3)
+
 set(4_PROJECT "4.Advanced_OpenGL")
-file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/FrameBuffers/*.cc")
+file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/DepthTesting/*.cc")
 add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 target_link_libraries(${4_PROJECT} glfw3)
