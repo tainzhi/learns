@@ -99,7 +99,12 @@ include_directories(
 # add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 # target_link_libraries(${4_PROJECT} glfw3)
 
+# set(4_PROJECT "4.Advanced_OpenGL")
+# file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/DepthTesting/*.cc")
+# add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
+
 set(4_PROJECT "4.Advanced_OpenGL")
-file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/DepthTesting/*.cc")
+file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/StencilTesting/*.cc")
 add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
+
 target_link_libraries(${4_PROJECT} glfw3)
