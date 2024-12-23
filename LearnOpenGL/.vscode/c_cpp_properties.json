@@ -1,92 +1,69 @@
 // 参考：https://code.visualstudio.com/docs/cpp/c-cpp-properties-schema-reference
 {
     "env": {
-        // 设置默认项，这样不同platform就无需再设置
-        "myDefaultIncludePath": [
-        ],
-        "myCompilerPath": ""
+      // 设置默认项，这样不同platform就无需再设置
+      "myIncludePath": [
+        "${workspaceRoot}/**",
+        "${workspaceRoot}/include",
+        "${workspaceRoot}/build/configuration",
+        "${workspaceRoot}/3rd-libs/glad/include",
+        "${workspaceRoot}/3rd-libs/glfw3/include",
+        "${workspaceRoot}/3rd-libs/assimp/include"
+      ],
+      "myDefines": [
+        "_DEBUG",
+        "UNICODE",
+        "_UNICODE"
+      ],
+      "myCompilerPath": ""
     },
     "configurations": [
         {
             "name": "Win32",
-            "includePath": [
-                "${workspaceRoot}/**",
-                "${workspaceRoot}/include",
-                "${workspaceRoot}/build/configuration",
-                "${workspaceRoot}/3rd-libs/glad/include",
-                "${workspaceRoot}/3rd-libs/glfw3/include",
-                "${workspaceRoot}/3rd-libs/assimp/include"
+            "compilerPath": "C:/Users/qiufq1/scoop/apps/mingw/current/bin/g++.exe",
+            "intelliSenseMode": "windows-gcc-x64",
+            "includePath": ["${myIncludePath}"
             ],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE"
-            ],
+            "defines": ["${myDefines}", "_WINDOWS"],
             "cStandard": "c17",
             "cppStandard": "c++23",
-            "intelliSenseMode": "windows-gcc-x64",
-            "browse": {
-                "path": [
-                    "${workspaceRoot}/**",
-                    "${workspaceRoot}/include",
-                    "${workspaceRoot}/build/configuration",
-                    "${workspaceRoot}/3rd-libs/glad/include",
-                    "${workspaceRoot}/3rd-libs/glfw3/include",
-                    "${workspaceRoot}/3rd-libs/assimp/include"
-                ],
-                "limitSymbolsToIncludedHeaders": false,
-                "databaseFilename": ""
-            },
             "windowsSdkVersion": "10.0.22000.0",
-            "compilerPath": "C:/Users/qiufq1/scoop/apps/mingw/current/bin/g++.exe"
+            "browse": {
+                "path": ["${myIncludePath}", "${workspaceFolder}"]
+            }
         },
         {
-            "name": "Mac",
-            "includePath": [],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE"
-            ],
+           "name": "Mac",
+            "compilerPath": "/usr/bin/clang",
+            "intelliSenseMode": "macos-clang-x64",
+            "includePath": ["${myIncludePath}"],
+            "defines": ["${myDefines}"],
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "clang-x64",
+            "macFrameworkPath": ["/System/Library/Frameworks", "/Library/Frameworks"],
             "browse": {
-                "limitSymbolsToIncludedHeaders": true,
-                "databaseFilename": ""
+                "path": ["${myIncludePath}", "${workspaceFolder}"]
             }
         },
         {
             "name": "Linux",
-            "includePath": [
-                "${workspaceRoot}/**",
-                "${workspaceRoot}/include",
-                "${workspaceRoot}/build/configuration",
-                "${workspaceRoot}/3rd-libs/glad/include",
-                "${workspaceRoot}/3rd-libs/glfw3/include",
-                "${workspaceRoot}/3rd-libs/assimp/include"
-            ],
-            "defines": [
-                "_DEBUG",
-                "UNICODE",
-                "_UNICODE"
-            ],
-            "cStandard": "c17",
+            "compilerPath": "/usr/bin/g++",
+            "compilerArgs": ["-m32"],
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": ["${myIncludePath}", "/user/include"],
+            "defines": ["${myDefines}"],
+            "cStandard": "gnu11",
             "cppStandard": "c++23",
-            "intelliSenseMode": "windows-gcc-x64",
+            "configurationProvider": "ms-vscode.makefile-tools",
+            "forcedInclude": [],
+            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "browse": {
                 "path": [
-                    "${workspaceRoot}/**",
-                    "${workspaceRoot}/include",
-                    "${workspaceRoot}/build/configuration",
-                    "${workspaceRoot}/3rd-libs/glad/include",
-                    "${workspaceRoot}/3rd-libs/glfw3/include",
-                    "${workspaceRoot}/3rd-libs/assimp/include"
+                    "${myIncludePath}", "${workspaceFolder}"
                 ],
-                "limitSymbolsToIncludedHeaders": false,
-                "databaseFilename": ""
-            },
-            "compilerPath": "/usr/bin/g++"
+                "limitSymbolsToIncludedHeaders": true,
+                "databaseFilename": "${workspaceFolder}/.vscode/browse.vc.db"
+            }
         }
     ],
     "version": 4
