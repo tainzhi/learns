@@ -51,8 +51,13 @@ if(CMAKE_CXX_COMPILER MATCHES ".*mingw.*")
         # download from msys2 packege: https://packages.msys2.org/packages/mingw-w64-x86_64-assimp
         set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/3rd-libs/assimp/lib/mingw/libassimp.a")
 else()  
-        message(FATAL_ERROR "no assimp library for non-mingw compilers, please add one into ${CMAKE_SOURCE_DIR}/3rd-libs/assimp/lib/<platform-name>/<assimp name>.a")
-        return()
+        if(CMAKE_SYSTEM_NAME MATCHES "Linux") 
+                message(STATUS "link assimp linux library")  
+                set(ASSIMP_LIB "${CMAKE_SOURCE_DIR}/3rd-libs/assimp/lib/Linux/libassimp.so")
+        else()
+                message(FATAL_ERROR "no assimp library for non-mingw compilers, please add one into ${CMAKE_SOURCE_DIR}/3rd-libs/assimp/lib/<platform-name>/<assimp name>.a")
+                return()
+        endif()
 endif()
 add_library(assimp STATIC IMPORTED)
 set_target_properties(assimp PROPERTIES
@@ -72,32 +77,24 @@ include_directories(
 )
 
 # todo: uncomment
-# set(1_PROJECT "1.Gettings_Started")
-# # Getting Started - camera - mouse
 # file(GLOB 1_PROJECT_SRC "${CMAKE_SOURCE_DIR}/src/${1_PROJECT}/camera/mouse/main.cc")
-# add_executable(${1_PROJECT} ${GLAD_SRC} ${1_PROJECT_SRC})
-# # 为可执行文件${PROJECT_NAME}添加共享库链接
-# target_link_libraries(${1_PROJECT} 
-#         glfw3
-# )
+# add_executable(1_PROJECT ${GLAD_SRC} ${1_PROJECT_SRC})
+# target_link_libraries(1_PROJECT glfw3)
 
 # todo: uncomment
-# set(2_PROJECT "2.Lighting")
 # file(GLOB 2_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${2_PROJECT}/Colors/*.cc")
-# add_executable(${2_PROJECT} ${GLAD_SRC} ${2_PROJECT_SRC})
-# target_link_libraries(${2_PROJECT} glfw3)
+# add_executable(2_PROJECT ${GLAD_SRC} ${2_PROJECT_SRC})
+# target_link_libraries(2_PROJECT glfw3)
 
 # todo: uncomment
-# set(3_PROJECT "3.Model_Loading")
 # file(GLOB 3_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${3_PROJECT}/*.cc")
 # message(INFO "3_PROJECT_SRC=${3_PROJECT_SRC}")
-# add_executable(${3_PROJECT} ${GLAD_SRC} ${3_PROJECT_SRC})
-# target_link_libraries(${3_PROJECT} glfw3 assimp)
+# add_executable(3_PROJECT ${GLAD_SRC} ${3_PROJECT_SRC})
+# target_link_libraries(3_PROJECT glfw3 assimp)
 
 # set(4_PROJECT "4.Advanced_OpenGL")
 # file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/FrameBuffers/*.cc")
 # add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
-# target_link_libraries(${4_PROJECT} glfw3)
 
 # set(4_PROJECT "4.Advanced_OpenGL")
 # file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/DepthTesting/*.cc")
@@ -107,4 +104,10 @@ set(4_PROJECT "4.Advanced_OpenGL")
 file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/StencilTesting/*.cc")
 add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 
-target_link_libraries(${4_PROJECT} glfw3)
+if(CMAKE_SYSTEM_NAME MATCHES "Linux") 
+        # linux 下必须要链接动态库dl和pthread,
+        # 否则会报错: undefined reference to dlopen, dlsym, dlclose; undefined reference to pthread_key_create, pthread_key_delete
+        target_link_libraries(${4_PROJECT} glfw3 assimp dl -pthread)
+else()
+        target_link_libraries(${4_PROJECT} glfw3 assimp)
+endif()

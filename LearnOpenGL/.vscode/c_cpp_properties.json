@@ -58,14 +58,35 @@
         },
         {
             "name": "Linux",
-            "includePath": [],
-            "cStandard": "c11",
-            "cppStandard": "c++17",
+            "includePath": [
+                "${workspaceRoot}/**",
+                "${workspaceRoot}/include",
+                "${workspaceRoot}/build/configuration",
+                "${workspaceRoot}/3rd-libs/glad/include",
+                "${workspaceRoot}/3rd-libs/glfw3/include",
+                "${workspaceRoot}/3rd-libs/assimp/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "cStandard": "c17",
+            "cppStandard": "c++23",
+            "intelliSenseMode": "windows-gcc-x64",
             "browse": {
-                "limitSymbolsToIncludedHeaders": true,
+                "path": [
+                    "${workspaceRoot}/**",
+                    "${workspaceRoot}/include",
+                    "${workspaceRoot}/build/configuration",
+                    "${workspaceRoot}/3rd-libs/glad/include",
+                    "${workspaceRoot}/3rd-libs/glfw3/include",
+                    "${workspaceRoot}/3rd-libs/assimp/include"
+                ],
+                "limitSymbolsToIncludedHeaders": false,
                 "databaseFilename": ""
             },
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "compilerPath": "/usr/bin/g++"
         }
     ],
     "version": 4

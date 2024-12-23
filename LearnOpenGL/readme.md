@@ -13,14 +13,24 @@ task的执行从Terminal > Run Build Task即可.
 
 `launch.json`从左侧的Run And Debug生成后launch.json并配置好后, 就可以直接F5运行
 
-## build/run in mingw
+## build/run
+### in mingw
 建议在windows下用 mingw，因为vc++在公司环境下使用有法律风险。
 通过 scoop 安装cpp环境 `scoop install cmake` 和 `scoop install mingw`
-```
+```shell
+# 指定mingw 编译
 cmake -S. -Bbuild  -G "MinGW Makefiles"
+# 构建可执行程序到 build目录下
 cmake --build build
-.\build\myLearOpenGL.exe
+# 在 build目录下生成可执行程序
 ```
+#### in linux
+```shell
+cmake -S. -Bbuild
+cmake --build build
+# 在 build目录下生成可执行程序
+```
+
 ## 依赖的第三方库
 
 ### download and install [soil](https://github.com/littlstar/soil)
@@ -32,10 +42,12 @@ cmake --build build
 
 ### [glfw](https://learnopengl.com/Getting-started/Creating-a-window)
 https://www.glfw.org/docs/latest/compile.html
-一般不需要重新配置，目前已经编译好 Apple/windows/mingw 系统的lib库。如果需要，可以自行编译添加
+一般不需要重新配置，目前已经编译好 Apple/Linux/windows/mingw 系统的lib库。如果需要，可以自行编译添加
 
 ### [assimp](https://github.com/assimp/assimp)
-官方库在Mingw下编译出错，故下载编译好的mingw assip库[msys2 assimp](https://packages.msys2.org/packages/mingw-w64-x86_64-assimp)
+目前已经编译后 mingw/linux 系统的lib库
+- mingw: 官方库在Mingw下编译出错，故下载编译好的mingw assip库[msys2 assimp](https://packages.msys2.org/packages/mingw-w64-x86_64-assimp)
+- linux: 源码编译
 
 ## 遇到的问题
 #### windows 10无法找到动态库 dll
