@@ -104,9 +104,12 @@ include_directories(
 # file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/StencilTesting/*.cc")
 # add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 
+# set(4_PROJECT "4.Advanced_OpenGL")
+# file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/Blending_discard/*.cc")
+# add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 
 set(4_PROJECT "4.Advanced_OpenGL")
-file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/Blending/*.cc")
+file(GLOB 4_PROJECT_SRC "${PROJECT_SOURCE_DIR}/src/${4_PROJECT}/Blending_sort/*.cc")
 add_executable(${4_PROJECT} ${GLAD_SRC} ${4_PROJECT_SRC} )
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux") 
